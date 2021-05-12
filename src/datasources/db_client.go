@@ -58,35 +58,173 @@ func (client DBClient) GetParteneri() ([]repositories.Partener, error) {
 		IDAdresa  int
 	)
 
-	rows, err := client.db.Query(
-		fmt.Sprintf(`SELECT "CodPartener", "NumePartener", "CUI", "EMail", "IdAdresa" FROM "Parteneri%s"`, client.tableSuffix),
-	)
-	if err != nil {
-		return []repositories.Partener{}, err
-	}
-
-	defer rows.Close()
-	for rows.Next() {
-		err := rows.Scan(&cod, &nume, &cui, &email, &IDAdresa)
+	switch client.name {
+	default:
+	case GlobalConnectionName:
+		rows, err := client.db.Query(
+			fmt.Sprintf(`SELECT "CodPartener", "NumePartener", "CUI", "EMail", "IdAdresa" FROM "Parteneri%s"`, client.tableSuffix),
+		)
 		if err != nil {
 			return []repositories.Partener{}, err
 		}
 
-		parteneri = append(
-			parteneri,
-			repositories.Partener{
-				CodPartener:  cod,
-				NumePartener: nume,
-				CUI:          cui,
-				Email:        email,
-				IDAdresa:     IDAdresa,
-			},
-		)
-	}
+		defer rows.Close()
+		for rows.Next() {
+			err := rows.Scan(&cod, &nume, &cui, &email, &IDAdresa)
+			if err != nil {
+				return []repositories.Partener{}, err
+			}
 
-	err = rows.Err()
-	if err != nil {
-		return []repositories.Partener{}, err
+			parteneri = append(
+				parteneri,
+				repositories.Partener{
+					CodPartener:  cod,
+					NumePartener: nume,
+					CUI:          cui,
+					Email:        email,
+					IDAdresa:     IDAdresa,
+				},
+			)
+		}
+
+		err = rows.Err()
+		if err != nil {
+			return []repositories.Partener{}, err
+		}
+		break
+
+	case Local1ConnectionName:
+		rows, err := client.db.Query(
+			fmt.Sprintf(`SELECT "CodPartener", "NumePartener", "IdAdresa" FROM "Parteneri%s"`, client.tableSuffix),
+		)
+		if err != nil {
+			return []repositories.Partener{}, err
+		}
+
+		defer rows.Close()
+		for rows.Next() {
+			err := rows.Scan(&cod, &nume, &IDAdresa)
+			if err != nil {
+				return []repositories.Partener{}, err
+			}
+
+			parteneri = append(
+				parteneri,
+				repositories.Partener{
+					CodPartener:  cod,
+					NumePartener: nume,
+					CUI:          cui,
+					Email:        email,
+					IDAdresa:     IDAdresa,
+				},
+			)
+		}
+
+		err = rows.Err()
+		if err != nil {
+			return []repositories.Partener{}, err
+		}
+		break
+
+	case Local2ConnectionName:
+		rows, err := client.db.Query(
+			fmt.Sprintf(`SELECT "CodPartener", "CUI", "IdAdresa" FROM "Parteneri%s"`, client.tableSuffix),
+		)
+		if err != nil {
+			return []repositories.Partener{}, err
+		}
+
+		defer rows.Close()
+		for rows.Next() {
+			err := rows.Scan(&cod, &cui, &IDAdresa)
+			if err != nil {
+				return []repositories.Partener{}, err
+			}
+
+			parteneri = append(
+				parteneri,
+				repositories.Partener{
+					CodPartener:  cod,
+					NumePartener: nume,
+					CUI:          cui,
+					Email:        email,
+					IDAdresa:     IDAdresa,
+				},
+			)
+		}
+
+		err = rows.Err()
+		if err != nil {
+			return []repositories.Partener{}, err
+		}
+		break
+
+	case Local3ConnectionName:
+		rows, err := client.db.Query(
+			fmt.Sprintf(`SELECT "CodPartener", "EMail", "IdAdresa" FROM "Parteneri%s"`, client.tableSuffix),
+		)
+		if err != nil {
+			return []repositories.Partener{}, err
+		}
+
+		defer rows.Close()
+		for rows.Next() {
+			err := rows.Scan(&cod, &email, &IDAdresa)
+			if err != nil {
+				return []repositories.Partener{}, err
+			}
+
+			parteneri = append(
+				parteneri,
+				repositories.Partener{
+					CodPartener:  cod,
+					NumePartener: nume,
+					CUI:          cui,
+					Email:        email,
+					IDAdresa:     IDAdresa,
+				},
+			)
+		}
+
+		err = rows.Err()
+		if err != nil {
+			return []repositories.Partener{}, err
+		}
+		break
+
+	case Local4ConnectionName:
+		rows, err := client.db.Query(
+			fmt.Sprintf(`SELECT "CodPartener", "IdAdresa" FROM "Parteneri%s"`, client.tableSuffix),
+		)
+		if err != nil {
+			return []repositories.Partener{}, err
+		}
+
+		defer rows.Close()
+		for rows.Next() {
+			err := rows.Scan(&cod, &IDAdresa)
+			if err != nil {
+				return []repositories.Partener{}, err
+			}
+
+			parteneri = append(
+				parteneri,
+				repositories.Partener{
+					CodPartener:  cod,
+					NumePartener: nume,
+					CUI:          cui,
+					Email:        email,
+					IDAdresa:     IDAdresa,
+				},
+			)
+		}
+
+		err = rows.Err()
+		if err != nil {
+			return []repositories.Partener{}, err
+		}
+		break
+
 	}
 
 	return parteneri, nil
