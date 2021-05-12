@@ -253,6 +253,212 @@ func (client DBClient) InsertPartener(partenerAdresa repositories.InsertPartener
 	return err
 }
 
+func (client DBClient) GetAdrese() ([]repositories.Adresa, error) {
+	var (
+		adrese     []repositories.Adresa
+		IDAdresa   int
+		numeAdresa string
+		oras       string
+		judet      string
+		sector     string
+		strada     string
+		numar      string
+		bloc       string
+		etaj       int
+	)
+
+	switch client.name {
+	default:
+	case GlobalConnectionName:
+		rows, err := client.db.Query(
+			fmt.Sprintf(`SELECT "IdAdresa", "NumeAdresa", "Oras", "Judet", "Sector", "Strada", "Numar", "Bloc", "Etaj" FROM "Adrese%s"`, client.tableSuffix),
+		)
+		if err != nil {
+			return []repositories.Adresa{}, err
+		}
+
+		defer rows.Close()
+		for rows.Next() {
+			err := rows.Scan(&IDAdresa, &numeAdresa, &oras, &judet, &sector, &strada, &numar, &bloc, &etaj)
+			if err != nil {
+				return []repositories.Adresa{}, err
+			}
+
+			adrese = append(
+				adrese,
+				repositories.Adresa{
+					IDAdresa:   IDAdresa,
+					NumeAdresa: numeAdresa,
+					Oras:       oras,
+					Judet:      judet,
+					Sector:     sector,
+					Strada:     strada,
+					Numar:      numar,
+					Bloc:       bloc,
+					Etaj:       etaj,
+				},
+			)
+		}
+
+		err = rows.Err()
+		if err != nil {
+			return []repositories.Adresa{}, err
+		}
+		break
+
+	case Local1ConnectionName:
+		rows, err := client.db.Query(
+			fmt.Sprintf(`SELECT "IdAdresa", "NumeAdresa" FROM "Adrese%s"`, client.tableSuffix),
+		)
+		if err != nil {
+			return []repositories.Adresa{}, err
+		}
+
+		defer rows.Close()
+		for rows.Next() {
+			err := rows.Scan(&IDAdresa, &numeAdresa)
+			if err != nil {
+				return []repositories.Adresa{}, err
+			}
+
+			adrese = append(
+				adrese,
+				repositories.Adresa{
+					IDAdresa:   IDAdresa,
+					NumeAdresa: numeAdresa,
+					Oras:       oras,
+					Judet:      judet,
+					Sector:     sector,
+					Strada:     strada,
+					Numar:      numar,
+					Bloc:       bloc,
+					Etaj:       etaj,
+				},
+			)
+		}
+
+		err = rows.Err()
+		if err != nil {
+			return []repositories.Adresa{}, err
+		}
+		break
+
+	case Local2ConnectionName:
+		rows, err := client.db.Query(
+			fmt.Sprintf(`SELECT "IdAdresa", "Oras" "Adrese%s"`, client.tableSuffix),
+		)
+		if err != nil {
+			return []repositories.Adresa{}, err
+		}
+
+		defer rows.Close()
+		for rows.Next() {
+			err := rows.Scan(&IDAdresa, &oras)
+			if err != nil {
+				return []repositories.Adresa{}, err
+			}
+
+			adrese = append(
+				adrese,
+				repositories.Adresa{
+					IDAdresa:   IDAdresa,
+					NumeAdresa: numeAdresa,
+					Oras:       oras,
+					Judet:      judet,
+					Sector:     sector,
+					Strada:     strada,
+					Numar:      numar,
+					Bloc:       bloc,
+					Etaj:       etaj,
+				},
+			)
+		}
+
+		err = rows.Err()
+		if err != nil {
+			return []repositories.Adresa{}, err
+		}
+		break
+
+	case Local3ConnectionName:
+		rows, err := client.db.Query(
+			fmt.Sprintf(`SELECT "IdAdresa", "Judet" FROM "Adrese%s"`, client.tableSuffix),
+		)
+		if err != nil {
+			return []repositories.Adresa{}, err
+		}
+
+		defer rows.Close()
+		for rows.Next() {
+			err := rows.Scan(&IDAdresa, &judet)
+			if err != nil {
+				return []repositories.Adresa{}, err
+			}
+
+			adrese = append(
+				adrese,
+				repositories.Adresa{
+					IDAdresa:   IDAdresa,
+					NumeAdresa: numeAdresa,
+					Oras:       oras,
+					Judet:      judet,
+					Sector:     sector,
+					Strada:     strada,
+					Numar:      numar,
+					Bloc:       bloc,
+					Etaj:       etaj,
+				},
+			)
+		}
+
+		err = rows.Err()
+		if err != nil {
+			return []repositories.Adresa{}, err
+		}
+		break
+
+	case Local4ConnectionName:
+		rows, err := client.db.Query(
+			fmt.Sprintf(`SELECT "IdAdresa", "Sector", "Strada", "Numar", "Bloc", "Etaj" FROM "Adrese%s"`, client.tableSuffix),
+		)
+		if err != nil {
+			return []repositories.Adresa{}, err
+		}
+
+		defer rows.Close()
+		for rows.Next() {
+			err := rows.Scan(&IDAdresa, &sector, &strada, &numar, &bloc, &etaj)
+			if err != nil {
+				return []repositories.Adresa{}, err
+			}
+
+			adrese = append(
+				adrese,
+				repositories.Adresa{
+					IDAdresa:   IDAdresa,
+					NumeAdresa: numeAdresa,
+					Oras:       oras,
+					Judet:      judet,
+					Sector:     sector,
+					Strada:     strada,
+					Numar:      numar,
+					Bloc:       bloc,
+					Etaj:       etaj,
+				},
+			)
+		}
+
+		err = rows.Err()
+		if err != nil {
+			return []repositories.Adresa{}, err
+		}
+		break
+
+	}
+
+	return adrese, nil
+}
+
 func (client DBClient) InsertAdresa(adresa repositories.Adresa) (int, error) {
 	stmt, err := client.db.Prepare(fmt.Sprintf(`INSERT INTO "Adrese%s"("NumeAdresa", "Oras", "Judet", "Sector", "Strada", "Numar", "Bloc", "Etaj") VALUES(:1, :2, :3, :4, :5, :6, :7, :8)`, client.tableSuffix))
 	if err != nil {

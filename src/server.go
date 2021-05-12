@@ -56,6 +56,11 @@ func newServer(connections datasources.Connections, options ...option) *server {
 
 	s.mux = http.NewServeMux()
 
+	s.mux.HandleFunc("/adrese",
+		func(w http.ResponseWriter, r *http.Request) {
+			handlers.HandleAdrese(w, r, connections, s.logger)
+		},
+	)
 	s.mux.HandleFunc("/articole",
 		func(w http.ResponseWriter, r *http.Request) {
 			handlers.HandleArticole(w, r, connections, s.logger)
