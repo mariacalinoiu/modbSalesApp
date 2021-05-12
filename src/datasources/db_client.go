@@ -527,7 +527,7 @@ func (client DBClient) GetArticole() ([]repositories.Articol, error) {
 	)
 
 	rows, err := client.db.Query(
-		fmt.Sprintf(`SELECT "CodArticol%s", "NumeArticol", "CodGrupa", "CantitateStoc", "IdUnitateDeMasura" FROM "Articole"`, client.tableSuffix),
+		fmt.Sprintf(`SELECT "CodArticol", "NumeArticol", "CodGrupa", "CantitateStoc", "IdUnitateDeMasura" FROM "Articole%s"`, client.tableSuffix),
 	)
 	if err != nil {
 		return []repositories.Articol{}, err
