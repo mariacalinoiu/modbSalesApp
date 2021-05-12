@@ -1,4 +1,4 @@
-module salesApp
+module modbSalesApp
 
 go 1.15
 
