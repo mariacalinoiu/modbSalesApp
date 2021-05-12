@@ -589,37 +589,183 @@ func (client DBClient) GetVanzatori() ([]repositories.Vanzator, error) {
 		IDAdresa    int
 	)
 
-	rows, err := client.db.Query(
-		fmt.Sprintf(`SELECT "CodVanzator", "Nume", "Prenume", "SalariuBaza", "Comision", "EMail", "IdAdresa" FROM "Vanzatori%s"`, client.tableSuffix),
-	)
-	if err != nil {
-		return []repositories.Vanzator{}, err
-	}
-
-	defer rows.Close()
-	for rows.Next() {
-		err := rows.Scan(&codVanzator, &nume, &prenume, &salariuBaza, &comision, &email, &IDAdresa)
+	switch client.name {
+	default:
+	case GlobalConnectionName:
+		rows, err := client.db.Query(
+			fmt.Sprintf(`SELECT "CodVanzator", "Nume", "Prenume", "SalariuBaza", "Comision", "EMail", "IdAdresa" FROM "Vanzatori%s"`, client.tableSuffix),
+		)
 		if err != nil {
 			return []repositories.Vanzator{}, err
 		}
 
-		vanzatori = append(
-			vanzatori,
-			repositories.Vanzator{
-				CodVanzator: codVanzator,
-				Nume:        nume,
-				Prenume:     prenume,
-				SalariuBaza: salariuBaza,
-				Comision:    comision,
-				Email:       email,
-				IDAdresa:    IDAdresa,
-			},
-		)
-	}
+		defer rows.Close()
+		for rows.Next() {
+			err := rows.Scan(&codVanzator, &nume, &prenume, &salariuBaza, &comision, &email, &IDAdresa)
+			if err != nil {
+				return []repositories.Vanzator{}, err
+			}
 
-	err = rows.Err()
-	if err != nil {
-		return []repositories.Vanzator{}, err
+			vanzatori = append(
+				vanzatori,
+				repositories.Vanzator{
+					CodVanzator: codVanzator,
+					Nume:        nume,
+					Prenume:     prenume,
+					SalariuBaza: salariuBaza,
+					Comision:    comision,
+					Email:       email,
+					IDAdresa:    IDAdresa,
+				},
+			)
+		}
+
+		err = rows.Err()
+		if err != nil {
+			return []repositories.Vanzator{}, err
+		}
+		break
+
+	case Local1ConnectionName:
+		rows, err := client.db.Query(
+			fmt.Sprintf(`SELECT "CodVanzator", "Nume", "Prenume", "IdAdresa" FROM "Vanzatori%s"`, client.tableSuffix),
+		)
+		if err != nil {
+			return []repositories.Vanzator{}, err
+		}
+
+		defer rows.Close()
+		for rows.Next() {
+			err := rows.Scan(&codVanzator, &nume, &prenume, &IDAdresa)
+			if err != nil {
+				return []repositories.Vanzator{}, err
+			}
+
+			vanzatori = append(
+				vanzatori,
+				repositories.Vanzator{
+					CodVanzator: codVanzator,
+					Nume:        nume,
+					Prenume:     prenume,
+					SalariuBaza: salariuBaza,
+					Comision:    comision,
+					Email:       email,
+					IDAdresa:    IDAdresa,
+				},
+			)
+		}
+
+		err = rows.Err()
+		if err != nil {
+			return []repositories.Vanzator{}, err
+		}
+		break
+
+	case Local2ConnectionName:
+		rows, err := client.db.Query(
+			fmt.Sprintf(`SELECT "CodVanzator", "SalariuBaza", "IdAdresa" FROM "Vanzatori%s"`, client.tableSuffix),
+		)
+		if err != nil {
+			return []repositories.Vanzator{}, err
+		}
+
+		defer rows.Close()
+		for rows.Next() {
+			err := rows.Scan(&codVanzator, &salariuBaza, &IDAdresa)
+			if err != nil {
+				return []repositories.Vanzator{}, err
+			}
+
+			vanzatori = append(
+				vanzatori,
+				repositories.Vanzator{
+					CodVanzator: codVanzator,
+					Nume:        nume,
+					Prenume:     prenume,
+					SalariuBaza: salariuBaza,
+					Comision:    comision,
+					Email:       email,
+					IDAdresa:    IDAdresa,
+				},
+			)
+		}
+
+		err = rows.Err()
+		if err != nil {
+			return []repositories.Vanzator{}, err
+		}
+		break
+
+	case Local3ConnectionName:
+		rows, err := client.db.Query(
+			fmt.Sprintf(`SELECT "CodVanzator", "Comision", "IdAdresa" FROM "Vanzatori%s"`, client.tableSuffix),
+		)
+		if err != nil {
+			return []repositories.Vanzator{}, err
+		}
+
+		defer rows.Close()
+		for rows.Next() {
+			err := rows.Scan(&codVanzator, &comision, &IDAdresa)
+			if err != nil {
+				return []repositories.Vanzator{}, err
+			}
+
+			vanzatori = append(
+				vanzatori,
+				repositories.Vanzator{
+					CodVanzator: codVanzator,
+					Nume:        nume,
+					Prenume:     prenume,
+					SalariuBaza: salariuBaza,
+					Comision:    comision,
+					Email:       email,
+					IDAdresa:    IDAdresa,
+				},
+			)
+		}
+
+		err = rows.Err()
+		if err != nil {
+			return []repositories.Vanzator{}, err
+		}
+		break
+
+	case Local4ConnectionName:
+		rows, err := client.db.Query(
+			fmt.Sprintf(`SELECT "CodVanzator", "EMail", FROM "Vanzatori%s"`, client.tableSuffix),
+		)
+		if err != nil {
+			return []repositories.Vanzator{}, err
+		}
+
+		defer rows.Close()
+		for rows.Next() {
+			err := rows.Scan(&codVanzator, &nume, &prenume, &salariuBaza, &comision, &email, &IDAdresa)
+			if err != nil {
+				return []repositories.Vanzator{}, err
+			}
+
+			vanzatori = append(
+				vanzatori,
+				repositories.Vanzator{
+					CodVanzator: codVanzator,
+					Nume:        nume,
+					Prenume:     prenume,
+					SalariuBaza: salariuBaza,
+					Comision:    comision,
+					Email:       email,
+					IDAdresa:    IDAdresa,
+				},
+			)
+		}
+
+		err = rows.Err()
+		if err != nil {
+			return []repositories.Vanzator{}, err
+		}
+		break
+
 	}
 
 	return vanzatori, nil
