@@ -36,8 +36,8 @@ func logWith(logger *log.Logger) option {
 	}
 }
 
-func setup(logger *log.Logger, db datasources.DBClient, dw datasources.DBClient) *http.Server {
-	server := newServer(db, dw, logWith(logger))
+func setup(logger *log.Logger, connections datasources.Connections) *http.Server {
+	server := newServer(connections, logWith(logger))
 	return &http.Server{
 		Addr:         ":8081",
 		Handler:      server,
@@ -47,7 +47,7 @@ func setup(logger *log.Logger, db datasources.DBClient, dw datasources.DBClient)
 	}
 }
 
-func newServer(db datasources.DBClient, dw datasources.DBClient, options ...option) *server {
+func newServer(connections datasources.Connections, options ...option) *server {
 	s := &server{logger: log.New(ioutil.Discard, "", 0)}
 
 	for _, o := range options {
@@ -58,77 +58,77 @@ func newServer(db datasources.DBClient, dw datasources.DBClient, options ...opti
 
 	s.mux.HandleFunc("/articole",
 		func(w http.ResponseWriter, r *http.Request) {
-			handlers.HandleArticole(w, r, db, s.logger)
+			handlers.HandleArticole(w, r, connections, s.logger)
 		},
 	)
 	s.mux.HandleFunc("/parteneri",
 		func(w http.ResponseWriter, r *http.Request) {
-			handlers.HandleParteneri(w, r, db, s.logger)
+			handlers.HandleParteneri(w, r, connections, s.logger)
 		},
 	)
 	s.mux.HandleFunc("/vanzatori",
 		func(w http.ResponseWriter, r *http.Request) {
-			handlers.HandleVanzatori(w, r, db, s.logger)
+			handlers.HandleVanzatori(w, r, connections, s.logger)
 		},
 	)
 	s.mux.HandleFunc("/vanzari",
 		func(w http.ResponseWriter, r *http.Request) {
-			handlers.HandleVanzari(w, r, db, s.logger)
+			handlers.HandleVanzari(w, r, connections, s.logger)
 		},
 	)
 	s.mux.HandleFunc("/liniiVanzari",
 		func(w http.ResponseWriter, r *http.Request) {
-			handlers.HandleLiniiVanzari(w, r, db, s.logger)
+			handlers.HandleLiniiVanzari(w, r, connections, s.logger)
 		},
 	)
 	s.mux.HandleFunc("/sucursale",
 		func(w http.ResponseWriter, r *http.Request) {
-			handlers.HandleSucursale(w, r, db, s.logger)
+			handlers.HandleSucursale(w, r, connections, s.logger)
 		},
 	)
 	s.mux.HandleFunc("/proiecte",
 		func(w http.ResponseWriter, r *http.Request) {
-			handlers.HandleProiecte(w, r, db, s.logger)
+			handlers.HandleProiecte(w, r, connections, s.logger)
 		},
 	)
 	s.mux.HandleFunc("/grupeArticole",
 		func(w http.ResponseWriter, r *http.Request) {
-			handlers.HandleGrupeArticole(w, r, db, s.logger)
+			handlers.HandleGrupeArticole(w, r, connections, s.logger)
 		},
 	)
 	s.mux.HandleFunc("/um",
 		func(w http.ResponseWriter, r *http.Request) {
-			handlers.HandleUnitatiDeMasura(w, r, db, s.logger)
+			handlers.HandleUnitatiDeMasura(w, r, connections, s.logger)
 		},
 	)
 	s.mux.HandleFunc("/formReport",
 		func(w http.ResponseWriter, r *http.Request) {
-			handlers.HandleFormReport(w, r, dw, s.logger)
+			handlers.HandleFormReport(w, r, connections, s.logger)
 		},
 	)
 	s.mux.HandleFunc("/groupedFormReport",
 		func(w http.ResponseWriter, r *http.Request) {
-			handlers.HandleGroupedFormReport(w, r, dw, s.logger)
+			handlers.HandleGroupedFormReport(w, r, connections, s.logger)
 		},
 	)
 	s.mux.HandleFunc("/vanzariGrupeArticole",
 		func(w http.ResponseWriter, r *http.Request) {
-			handlers.HandleVanzariGrupeArticole(w, r, dw, s.logger)
+			handlers.HandleVanzariGrupeArticole(w, r, connections, s.logger)
 		},
 	)
 	s.mux.HandleFunc("/cantitatiJudete",
 		func(w http.ResponseWriter, r *http.Request) {
-			handlers.HandleCantitatiJudete(w, r, dw, s.logger)
+			handlers.HandleCantitatiJudete(w, r, connections, s.logger)
 		},
 	)
 	s.mux.HandleFunc("/discountTrimestre",
 		func(w http.ResponseWriter, r *http.Request) {
-			handlers.HandleProcentDiscountTrimestre(w, r, dw, s.logger)
+			handlers.HandleProcentDiscountTrimestre(w, r, connections, s.logger)
 		},
 	)
 	s.mux.HandleFunc("/volumZile",
 		func(w http.ResponseWriter, r *http.Request) {
-			handlers.HandleVolumMediuZile(w, r, dw, s.logger)
+			handlers.HandleVolumMediuZile(w, r, connections, s.logger)
 		},
 	)
 
@@ -137,10 +137,14 @@ func newServer(db datasources.DBClient, dw datasources.DBClient, options ...opti
 
 func main() {
 	logger := log.New(os.Stdout, "", 0)
-	ip := "86.127.133.101"
-	db := datasources.GetClient("SCHEMA_PROIECT_OLDB", "pass1234", fmt.Sprintf("%s:1521", ip), "ORCL.DOCKER.INTERNAL")
-	dw := datasources.GetClient("SCHEMA_PROIECT_OLAP", "pass1234", fmt.Sprintf("%s:1521", ip), "ORCL.DOCKER.INTERNAL")
-	hs := setup(logger, db, dw)
+	ip := "5.12.79.189"
+	connections := make(datasources.Connections, 5)
+	connections[datasources.GlobalConnectionName] = datasources.GetClient("SCHEMA_PROIECT_MODB", "pass1234", fmt.Sprintf("%s:1521", ip), "MS.MSHOME.NET", datasources.GlobalConnectionName)
+	connections[datasources.Local1ConnectionName] = datasources.GetClient("SCHEMA_PROIECT_MODB", "pass1234", fmt.Sprintf("%s:1522", ip), "SLV1", datasources.Local1ConnectionName)
+	connections[datasources.Local2ConnectionName] = datasources.GetClient("SCHEMA_PROIECT_MODB", "pass1234", fmt.Sprintf("%s:1523", ip), "SLV2", datasources.Local2ConnectionName)
+	connections[datasources.Local3ConnectionName] = datasources.GetClient("SCHEMA_PROIECT_MODB", "pass1234", fmt.Sprintf("%s:1524", ip), "SLV3", datasources.Local3ConnectionName)
+	connections[datasources.Local4ConnectionName] = datasources.GetClient("SCHEMA_PROIECT_MODB", "pass1234", fmt.Sprintf("%s:1525", ip), "SLV4", datasources.Local4ConnectionName)
+	hs := setup(logger, connections)
 
 	logger.Printf("Listening on http://localhost%s\n", hs.Addr)
 	go func() {

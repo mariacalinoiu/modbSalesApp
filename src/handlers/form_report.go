@@ -10,10 +10,12 @@ import (
 	"modbSalesApp/src/repositories"
 )
 
-func HandleFormReport(w http.ResponseWriter, r *http.Request, dw datasources.DBClient, logger *log.Logger) {
+func HandleFormReport(w http.ResponseWriter, r *http.Request, connections datasources.Connections, logger *log.Logger) {
 	var response []byte
 	var status int
 	var err error
+
+	db := getDatabase(r, connections)
 
 	switch r.Method {
 	case http.MethodOptions:
@@ -22,7 +24,7 @@ func HandleFormReport(w http.ResponseWriter, r *http.Request, dw datasources.DBC
 		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, Authorization, X-CSRF-Token")
 		w.Header().Set("Access-Control-Expose-Headers", "Authorization")
 	case http.MethodGet:
-		response, status, err = getFormReport(dw, r, logger)
+		response, status, err = getFormReport(db, r, logger)
 	default:
 		status = http.StatusBadRequest
 		err = errors.New("wrong method type for /formReport route")

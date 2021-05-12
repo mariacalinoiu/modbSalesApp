@@ -5,7 +5,18 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+
+	"modbSalesApp/src/datasources"
 )
+
+func getDatabase(r *http.Request, connections datasources.Connections) datasources.DBClient {
+	db, _ := getStringParameter(r, "dbConnection", true)
+	if connection, ok := connections[db]; ok {
+		return connection
+	}
+
+	return connections[datasources.GlobalConnectionName]
+}
 
 func getIntParameter(r *http.Request, paramName string, isMandatory bool) (int, error) {
 	stringParam, err := getStringParameter(r, paramName, isMandatory)

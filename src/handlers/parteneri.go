@@ -11,10 +11,12 @@ import (
 	"modbSalesApp/src/repositories"
 )
 
-func HandleParteneri(w http.ResponseWriter, r *http.Request, db datasources.DBClient, logger *log.Logger) {
+func HandleParteneri(w http.ResponseWriter, r *http.Request, connections datasources.Connections, logger *log.Logger) {
 	var response []byte
 	var status int
 	var err error
+
+	db := getDatabase(r, connections)
 
 	switch r.Method {
 	case http.MethodOptions:

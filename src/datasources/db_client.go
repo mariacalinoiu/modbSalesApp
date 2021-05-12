@@ -10,11 +10,25 @@ import (
 	"modbSalesApp/src/repositories"
 )
 
-type DBClient struct {
-	db *sql.DB
-}
+type (
+	DBClient struct {
+		db          *sql.DB
+		name        string
+		tableSuffix string
+	}
 
-func GetClient(user string, password string, hostname string, dbName string) DBClient {
+	Connections map[string]DBClient
+)
+
+const (
+	GlobalConnectionName = "global"
+	Local1ConnectionName = "local1"
+	Local2ConnectionName = "local2"
+	Local3ConnectionName = "local3"
+	Local4ConnectionName = "local4"
+)
+
+func GetClient(user string, password string, hostname string, dbName string, connectionName string) DBClient {
 	db, err := sql.Open(
 		"oracle",
 		fmt.Sprintf("oracle://%s:%s@%s/%s", user, password, hostname, dbName),
@@ -27,7 +41,11 @@ func GetClient(user string, password string, hostname string, dbName string) DBC
 	db.SetMaxOpenConns(100)
 	db.SetMaxIdleConns(100)
 
-	return DBClient{db: db}
+	return DBClient{
+		db:          db,
+		name:        connectionName,
+		tableSuffix: getTableSuffix(connectionName),
+	}
 }
 
 func (client DBClient) GetParteneri() ([]repositories.Partener, error) {
@@ -41,7 +59,7 @@ func (client DBClient) GetParteneri() ([]repositories.Partener, error) {
 	)
 
 	rows, err := client.db.Query(
-		`SELECT "CodPartener", "NumePartener", "CUI", "EMail", "IdAdresa" FROM "Parteneri"`,
+		fmt.Sprintf(`SELECT "CodPartener", "NumePartener", "CUI", "EMail", "IdAdresa" FROM "Parteneri%s"`, client.tableSuffix),
 	)
 	if err != nil {
 		return []repositories.Partener{}, err
@@ -81,7 +99,7 @@ func (client DBClient) InsertPartener(partenerAdresa repositories.InsertPartener
 	}
 
 	partener := partenerAdresa.Partener
-	stmt, err := client.db.Prepare(`INSERT INTO "Parteneri"("CodPartener", "NumePartener", "CUI", "EMail", "IdAdresa") VALUES(:1, :2, :3, :4, :5)`)
+	stmt, err := client.db.Prepare(fmt.Sprintf(`INSERT INTO "Parteneri%s"("CodPartener", "NumePartener", "CUI", "EMail", "IdAdresa") VALUES(:1, :2, :3, :4, :5)`, client.tableSuffix))
 	if err != nil {
 		return err
 	}
@@ -98,7 +116,7 @@ func (client DBClient) InsertPartener(partenerAdresa repositories.InsertPartener
 }
 
 func (client DBClient) InsertAdresa(adresa repositories.Adresa) (int, error) {
-	stmt, err := client.db.Prepare(`INSERT INTO "Adrese"("NumeAdresa", "Oras", "Judet", "Sector", "Strada", "Numar", "Bloc", "Etaj") VALUES(:1, :2, :3, :4, :5, :6, :7, :8)`)
+	stmt, err := client.db.Prepare(fmt.Sprintf(`INSERT INTO "Adrese%s"("NumeAdresa", "Oras", "Judet", "Sector", "Strada", "Numar", "Bloc", "Etaj") VALUES(:1, :2, :3, :4, :5, :6, :7, :8)`, client.tableSuffix))
 	if err != nil {
 		return -1, err
 	}
@@ -118,7 +136,7 @@ func (client DBClient) InsertAdresa(adresa repositories.Adresa) (int, error) {
 	}
 
 	var IDAdresa int
-	rows, err := client.db.Query(`SELECT NVL(MAX("IdAdresa"), 0) FROM "Adrese"`)
+	rows, err := client.db.Query(fmt.Sprintf(`SELECT NVL(MAX("IdAdresa"), 0) FROM "Adrese%s"`, client.tableSuffix))
 	if err != nil {
 		return -1, err
 	}
@@ -148,12 +166,12 @@ func (client DBClient) GetVanzari() ([]repositories.Vanzare, error) {
 	)
 
 	rows, err := client.db.Query(
-		`
+		fmt.Sprintf(`
 			SELECT "IdIntrare", "CodPartener", "Status", "Data", "DataLivrare", "Total", "Vat", "Discount", "Moneda", "Platit", NVL("Comentarii", 'N/A'), "CodVanzator", "IdSucursala" 
-			FROM "Vanzari" 
+			FROM "Vanzari%s" 
 			ORDER BY "IdIntrare"
 			OFFSET 0 ROWS FETCH NEXT 15 ROWS ONLY
-		`,
+		`, client.tableSuffix),
 	)
 	if err != nil {
 		return []repositories.Vanzare{}, err
@@ -196,7 +214,7 @@ func (client DBClient) GetVanzari() ([]repositories.Vanzare, error) {
 
 func (client DBClient) InsertVanzare(vanzareLinii repositories.InsertVanzare) error {
 	vanzare := vanzareLinii.Vanzare
-	stmt, err := client.db.Prepare(`INSERT INTO "Vanzari"("CodPartener", "Status", "Data", "DataLivrare", "Total", "Vat", "Discount", "Moneda", "Platit", "Comentarii", "CodVanzator", "IdSucursala") VALUES(:1, :2, TO_DATE(:3, 'MM/DD/YYYY'), TO_DATE(:4, 'MM/DD/YYYY'), :5, :6, :7, :8, :9, :10, :11, :12)`)
+	stmt, err := client.db.Prepare(fmt.Sprintf(`INSERT INTO "Vanzari%s"("CodPartener", "Status", "Data", "DataLivrare", "Total", "Vat", "Discount", "Moneda", "Platit", "Comentarii", "CodVanzator", "IdSucursala") VALUES(:1, :2, TO_DATE(:3, 'MM/DD/YYYY'), TO_DATE(:4, 'MM/DD/YYYY'), :5, :6, :7, :8, :9, :10, :11, :12)`, client.tableSuffix))
 	if err != nil {
 		return err
 	}
@@ -220,7 +238,7 @@ func (client DBClient) InsertVanzare(vanzareLinii repositories.InsertVanzare) er
 	}
 
 	var IDIntrare int
-	rows, err := client.db.Query(`SELECT NVL(MAX("IdIntrare"), 0) FROM "Vanzari"`)
+	rows, err := client.db.Query(fmt.Sprintf(`SELECT NVL(MAX("IdIntrare"), 0) FROM "Vanzari%s"`, client.tableSuffix))
 	if err != nil {
 		return err
 	}
@@ -254,7 +272,7 @@ func (client DBClient) GetLiniiVanzare(IDIntrareVanzari int) ([]repositories.Lin
 	)
 
 	rows, err := client.db.Query(
-		`SELECT "IdIntrare", "NumarLinie", "CodArticol", "Cantitate", "Pret", "Discount", "Vat", "TotalLinie", "IdProiect" FROM "LiniiVanzari" WHERE "IdIntrare" = :1`,
+		fmt.Sprintf(`SELECT "IdIntrare", "NumarLinie", "CodArticol", "Cantitate", "Pret", "Discount", "Vat", "TotalLinie", "IdProiect" FROM "LiniiVanzari%s" WHERE "IdIntrare" = :1`, client.tableSuffix),
 		IDIntrareVanzari,
 	)
 	if err != nil {
@@ -295,7 +313,7 @@ func (client DBClient) GetLiniiVanzare(IDIntrareVanzari int) ([]repositories.Lin
 func (client DBClient) InsertLinieVanzare(linie repositories.LinieVanzare) error {
 	var nrLinieVanzare int
 	rows, err := client.db.Query(
-		`SELECT NVL(MAX("NumarLinie"), 0) FROM "LiniiVanzari" WHERE "IdIntrare" = :1`,
+		fmt.Sprintf(`SELECT NVL(MAX("NumarLinie"), 0) FROM "LiniiVanzari%s" WHERE "IdIntrare" = :1`, client.tableSuffix),
 		linie.IDIntrare,
 	)
 	if err != nil {
@@ -305,7 +323,7 @@ func (client DBClient) InsertLinieVanzare(linie repositories.LinieVanzare) error
 	rows.Next()
 	err = rows.Scan(&nrLinieVanzare)
 
-	stmt, err := client.db.Prepare(`INSERT INTO "LiniiVanzari"("IdIntrare", "NumarLinie", "CodArticol", "Cantitate", "Pret", "Discount", "Vat", "TotalLinie", "IdProiect") VALUES(:1, :2, :3, :4, :5, :6, :7, :8, :9)`)
+	stmt, err := client.db.Prepare(fmt.Sprintf(`INSERT INTO "LiniiVanzari%s"("IdIntrare", "NumarLinie", "CodArticol", "Cantitate", "Pret", "Discount", "Vat", "TotalLinie", "IdProiect") VALUES(:1, :2, :3, :4, :5, :6, :7, :8, :9)`, client.tableSuffix))
 	if err != nil {
 		return err
 	}
@@ -326,7 +344,7 @@ func (client DBClient) InsertLinieVanzare(linie repositories.LinieVanzare) error
 }
 
 func (client DBClient) EditLinieVanzare(linie repositories.LinieVanzare) error {
-	stmt, err := client.db.Prepare(`UPDATE "LiniiVanzari" SET "CodArticol" = :1, "Cantitate" = :2, "Pret" = :3, "Discount" = :4, "Vat" = :5, "TotalLinie" = :6, "IdProiect" = :7 WHERE "IdIntrare" = :8 AND "NumarLinie" = :9`)
+	stmt, err := client.db.Prepare(fmt.Sprintf(`UPDATE "LiniiVanzari%s" SET "CodArticol" = :1, "Cantitate" = :2, "Pret" = :3, "Discount" = :4, "Vat" = :5, "TotalLinie" = :6, "IdProiect" = :7 WHERE "IdIntrare" = :8 AND "NumarLinie" = :9`, client.tableSuffix))
 	if err != nil {
 		return err
 	}
@@ -347,7 +365,7 @@ func (client DBClient) EditLinieVanzare(linie repositories.LinieVanzare) error {
 }
 
 func (client DBClient) DeleteLinieVanzare(IDIntrare int, numarLinie int) error {
-	stmt, err := client.db.Prepare(`DELETE FROM "LiniiVanzari" WHERE "IdIntrare" = :1 AND "NumarLinie" = :2`)
+	stmt, err := client.db.Prepare(fmt.Sprintf(`DELETE FROM "LiniiVanzari%s" WHERE "IdIntrare" = :1 AND "NumarLinie" = :2`, client.tableSuffix))
 	if err != nil {
 		return err
 	}
@@ -371,7 +389,7 @@ func (client DBClient) GetArticole() ([]repositories.Articol, error) {
 	)
 
 	rows, err := client.db.Query(
-		`SELECT "CodArticol", "NumeArticol", "CodGrupa", "CantitateStoc", "IdUnitateDeMasura" FROM "Articole"`,
+		fmt.Sprintf(`SELECT "CodArticol%s", "NumeArticol", "CodGrupa", "CantitateStoc", "IdUnitateDeMasura" FROM "Articole"`, client.tableSuffix),
 	)
 	if err != nil {
 		return []repositories.Articol{}, err
@@ -405,7 +423,7 @@ func (client DBClient) GetArticole() ([]repositories.Articol, error) {
 }
 
 func (client DBClient) InsertArticol(articol repositories.Articol) error {
-	stmt, err := client.db.Prepare(`INSERT INTO "Articole"("CodArticol", "NumeArticol", "CodGrupa", "CantitateStoc", "IdUnitateDeMasura") VALUES(:1, :2, :3, :4, :5)`)
+	stmt, err := client.db.Prepare(fmt.Sprintf(`INSERT INTO "Articole%s"("CodArticol", "NumeArticol", "CodGrupa", "CantitateStoc", "IdUnitateDeMasura") VALUES(:1, :2, :3, :4, :5)`, client.tableSuffix))
 	if err != nil {
 		return err
 	}
@@ -434,7 +452,7 @@ func (client DBClient) GetVanzatori() ([]repositories.Vanzator, error) {
 	)
 
 	rows, err := client.db.Query(
-		`SELECT "CodVanzator", "Nume", "Prenume", "SalariuBaza", "Comision", "EMail", "IdAdresa" FROM "Vanzatori"`,
+		fmt.Sprintf(`SELECT "CodVanzator", "Nume", "Prenume", "SalariuBaza", "Comision", "EMail", "IdAdresa" FROM "Vanzatori%s"`, client.tableSuffix),
 	)
 	if err != nil {
 		return []repositories.Vanzator{}, err
@@ -476,7 +494,7 @@ func (client DBClient) InsertVanzator(vanzatorAdresa repositories.InsertVanzator
 	}
 
 	vanzator := vanzatorAdresa.Vanzator
-	stmt, err := client.db.Prepare(`INSERT INTO "Vanzatori"("Nume", "Prenume", "SalariuBaza", "Comision", "EMail", "IdAdresa") VALUES(:1, :2, :3, :4, :5, :6)`)
+	stmt, err := client.db.Prepare(fmt.Sprintf(`INSERT INTO "Vanzatori%s"("Nume", "Prenume", "SalariuBaza", "Comision", "EMail", "IdAdresa") VALUES(:1, :2, :3, :4, :5, :6)`, client.tableSuffix))
 	if err != nil {
 		return err
 	}
@@ -502,7 +520,7 @@ func (client DBClient) GetSucursale() ([]repositories.Sucursala, error) {
 	)
 
 	rows, err := client.db.Query(
-		`SELECT "IdSucursala", "NumeSucursala", "IdAdresa" FROM "Sucursale"`,
+		fmt.Sprintf(`SELECT "IdSucursala", "NumeSucursala", "IdAdresa" FROM "Sucursale%s"`, client.tableSuffix),
 	)
 	if err != nil {
 		return []repositories.Sucursala{}, err
@@ -540,7 +558,7 @@ func (client DBClient) InsertSucursala(sucursalaAdresa repositories.InsertSucurs
 	}
 
 	sucursala := sucursalaAdresa.Sucursala
-	stmt, err := client.db.Prepare(`INSERT INTO "Sucursale"("NumeSucursala", "IdAdresa") VALUES(:1, :2)`)
+	stmt, err := client.db.Prepare(fmt.Sprintf(`INSERT INTO "Sucursale%s"("NumeSucursala", "IdAdresa") VALUES(:1, :2)`, client.tableSuffix))
 	if err != nil {
 		return err
 	}
@@ -564,7 +582,7 @@ func (client DBClient) GetProiecte() ([]repositories.Proiect, error) {
 	)
 
 	rows, err := client.db.Query(
-		`SELECT "IdProiect", "NumeProiect", "ValidDeLa", "ValidPanaLa", "Activ" FROM "Proiecte"`,
+		fmt.Sprintf(`SELECT "IdProiect", "NumeProiect", "ValidDeLa", "ValidPanaLa", "Activ" FROM "Proiecte%s"`, client.tableSuffix),
 	)
 	if err != nil {
 		return []repositories.Proiect{}, err
@@ -598,7 +616,7 @@ func (client DBClient) GetProiecte() ([]repositories.Proiect, error) {
 }
 
 func (client DBClient) InsertProiect(proiect repositories.Proiect) error {
-	stmt, err := client.db.Prepare(`INSERT INTO "Proiecte"("IdProiect", "NumeProiect", "ValidDeLa", "ValidPanaLa", "Activ") VALUES(:1, :2, TO_DATE(:3, 'MM/DD/YYYY'), TO_DATE(:4, 'MM/DD/YYYY'), :5)`)
+	stmt, err := client.db.Prepare(fmt.Sprintf(`INSERT INTO "Proiecte%s"("IdProiect", "NumeProiect", "ValidDeLa", "ValidPanaLa", "Activ") VALUES(:1, :2, TO_DATE(:3, 'MM/DD/YYYY'), TO_DATE(:4, 'MM/DD/YYYY'), :5)`, client.tableSuffix))
 	if err != nil {
 		return err
 	}
@@ -623,7 +641,7 @@ func (client DBClient) GetGrupeArticole() ([]repositories.GrupaArticole, error) 
 	)
 
 	rows, err := client.db.Query(
-		`SELECT "CodGrupa", "NumeGrupa", NVL("DetaliiGrupa", ' ') FROM "GrupaArticole"`,
+		fmt.Sprintf(`SELECT "CodGrupa", "NumeGrupa", NVL("DetaliiGrupa", ' ') FROM "GrupaArticole%s"`, client.tableSuffix),
 	)
 	if err != nil {
 		return []repositories.GrupaArticole{}, err
@@ -665,7 +683,7 @@ func (client DBClient) GetUnitatiDeMasura() ([]repositories.UnitateDeMasura, err
 	)
 
 	rows, err := client.db.Query(
-		`SELECT "IdUnitateDeMasura", "NumeUnitateDeMasura", "Inaltime", "Latime", "Lungime" FROM "UnitatiDeMasura"`,
+		fmt.Sprintf(`SELECT "IdUnitateDeMasura", "NumeUnitateDeMasura", "Inaltime", "Latime", "Lungime" FROM "UnitatiDeMasura%s"`, client.tableSuffix),
 	)
 	if err != nil {
 		return []repositories.UnitateDeMasura{}, err
@@ -705,13 +723,13 @@ func (client DBClient) GetVanzariGrupeArticole() ([]repositories.VanzariGrupeArt
 		vanzareTotala float32
 	)
 
-	rows, err := client.db.Query(`
+	rows, err := client.db.Query(fmt.Sprintf(`
 		SELECT NVL(SUM(fv."Platit"), 0) VanzareTotala, da."NumeGrupa"
-		FROM "Fapt_Vanzare" fv, "Dimensiune_Articol" da
+		FROM "Fapt_Vanzare%s" fv, "Dimensiune_Articol%s" da
 		WHERE fv."CodArticol" = da."CodArticol"
 		GROUP BY da."NumeGrupa"
 		
-	`)
+	`, client.tableSuffix, client.tableSuffix))
 	if err != nil {
 		return []repositories.VanzariGrupeArticole{}, err
 	}
@@ -748,12 +766,12 @@ func (client DBClient) GetCantitatiJudete() ([]repositories.CantitateJudete, err
 		cantitateMedie float32
 	)
 
-	rows, err := client.db.Query(`
+	rows, err := client.db.Query(fmt.Sprintf(`
 		SELECT NVL(AVG(fv."Cantitate"), 0) CantitateMedie, da."NumeUnitateDeMasura", sda."Judet"
-		FROM "Fapt_Vanzare" fv, "Dimesiune_Sucursala" ds, "SubDimensiune_Adresa" sda, "Dimensiune_Articol" da
+		FROM "Fapt_Vanzare%s" fv, "Dimesiune_Sucursala%s" ds, "SubDimensiune_Adresa%s" sda, "Dimensiune_Articol%s" da
 		WHERE fv."IdSucursala" = ds."IdSucursala" AND ds."IdAdresa" = sda."IdAdresa" AND fv."CodArticol" = da."CodArticol"
 		GROUP BY da."NumeUnitateDeMasura", sda."Judet"
-	`)
+	`, client.tableSuffix, client.tableSuffix, client.tableSuffix, client.tableSuffix))
 	if err != nil {
 		return []repositories.CantitateJudete{}, err
 	}
@@ -790,13 +808,13 @@ func (client DBClient) GetProcentDiscountTrimestre() ([]repositories.ProcentDisc
 		procentDiscount float32
 	)
 
-	rows, err := client.db.Query(`
+	rows, err := client.db.Query(fmt.Sprintf(`
 		SELECT NVL(AVG(fv."Dicount" * 100 / NVL(fv."Pret", 1)), 0) ProcentDiscount, dd."An" || '-' || 'q' || dd."Trimestru" Trimestru
-		FROM "Fapt_Vanzare" fv, "Dimesiune_Data" dd
+		FROM "Fapt_Vanzare%s" fv, "Dimesiune_Data%s" dd
 		WHERE fv."Data" = dd."Data"
 		GROUP BY dd."An", dd."Trimestru"
 		ORDER BY Trimestru
-	`)
+	`, client.tableSuffix, client.tableSuffix))
 	if err != nil {
 		return []repositories.ProcentDiscountTrimestru{}, err
 	}
@@ -845,10 +863,10 @@ func (client DBClient) GetVolumLivratZile(dataStart string, dataEnd string) ([]r
 	}
 
 	rows, err := client.db.Query(fmt.Sprintf("%s\n%s\n%s",
-		`
+		fmt.Sprintf(`
 		SELECT NVL(AVG(fv."Volum"), 0) VolumMediuLivrat, TO_CHAR(fv."DataLivrare", 'DY') ZiSaptamana
-		FROM "Fapt_Vanzare" fv
-		`,
+		FROM "Fapt_Vanzare%s" fv
+		`, client.tableSuffix),
 		whereStatement,
 		`GROUP BY TO_CHAR(fv."DataLivrare", 'DY')`,
 	))
@@ -882,9 +900,9 @@ func (client DBClient) GetVolumLivratZile(dataStart string, dataEnd string) ([]r
 
 func (client DBClient) GetFormReport(params repositories.FormParams) ([]repositories.FormResult, error) {
 	selectStatement := `SELECT fv."Pret", fv."Cantitate", fv."Vat", fv."Dicount", fv."Platit", fv."Comision", fv."Volum", fv."NumarTranzactii"`
-	fromStatement := `FROM "Fapt_Vanzare" fv`
+	fromStatement := fmt.Sprintf(`FROM "Fapt_Vanzare%s" fv`, client.tableSuffix)
 
-	query := getReportQueryBasedOnFormParams(selectStatement, fromStatement, params)
+	query := client.getReportQueryBasedOnFormParams(selectStatement, fromStatement, params)
 	fmt.Println(query)
 
 	var (
@@ -943,9 +961,9 @@ func (client DBClient) GetGroupedFormReport(params repositories.FormParams) ([]r
 			NVL(AVG(fv."Dicount"), 0) DiscountMediu, NVL(AVG(fv."Platit"), 0) PlatitMedie, NVL(AVG(fv."Comision"), 0) ComisionMediu, 
 			NVL(AVG(fv."Volum"), 0) VolumMediu, NVL(AVG(fv."NumarTranzactii"), 0) NumarTranzactiiMediu 
 	`
-	fromStatement := `FROM "Fapt_Vanzare" fv`
+	fromStatement := fmt.Sprintf(`FROM "Fapt_Vanzare%s" fv`, client.tableSuffix)
 
-	query := getReportQueryBasedOnFormParams(selectStatement, fromStatement, params)
+	query := client.getReportQueryBasedOnFormParams(selectStatement, fromStatement, params)
 	fmt.Println(query)
 
 	var (
@@ -1014,7 +1032,7 @@ func (client DBClient) GetGroupedFormReport(params repositories.FormParams) ([]r
 	return results, nil
 }
 
-func getReportQueryBasedOnFormParams(selectStatement string, fromStatement string, params repositories.FormParams) string {
+func (client DBClient) getReportQueryBasedOnFormParams(selectStatement string, fromStatement string, params repositories.FormParams) string {
 	whereStatement := ""
 
 	if params.CodVanzator != 0 {
@@ -1033,7 +1051,7 @@ func getReportQueryBasedOnFormParams(selectStatement string, fromStatement strin
 			whereStatement = fmt.Sprintf("%s AND ", whereStatement)
 		}
 		whereStatement = fmt.Sprintf("%s %s '%s'", whereStatement, `fv."CodArticol" = da."CodArticol" AND da."NumeArticol" =`, params.NumeArticol)
-		fromStatement = fmt.Sprintf(`%s, "Dimensiune_Articol" da`, fromStatement)
+		fromStatement = fmt.Sprintf(`%s, "Dimensiune_Articol%s" da`, fromStatement, client.tableSuffix)
 	}
 
 	if len(params.NumeSucursala) > 0 {
@@ -1043,7 +1061,7 @@ func getReportQueryBasedOnFormParams(selectStatement string, fromStatement strin
 			whereStatement = fmt.Sprintf("%s AND ", whereStatement)
 		}
 		whereStatement = fmt.Sprintf("%s %s '%s'", whereStatement, `fv."IdSucursala" = ds."IdSucursala" AND ds."NumeSucursala" =`, params.NumeSucursala)
-		fromStatement = fmt.Sprintf(`%s, "Dimesiune_Sucursala" ds`, fromStatement)
+		fromStatement = fmt.Sprintf(`%s, "Dimesiune_Sucursala%s" ds`, fromStatement, client.tableSuffix)
 	}
 
 	if len(params.NumePartener) > 0 {
@@ -1053,7 +1071,7 @@ func getReportQueryBasedOnFormParams(selectStatement string, fromStatement strin
 			whereStatement = fmt.Sprintf("%s AND ", whereStatement)
 		}
 		whereStatement = fmt.Sprintf("%s %s '%s'", whereStatement, `fv."CodPartener" = dp."CodPartener" AND dp."NumePartener" =`, params.NumePartener)
-		fromStatement = fmt.Sprintf(`%s, "Dimensiune_Partener" dp`, fromStatement)
+		fromStatement = fmt.Sprintf(`%s, "Dimensiune_Partener%s" dp`, fromStatement, client.tableSuffix)
 	}
 
 	if len(params.DataStart) > 0 {
@@ -1075,4 +1093,22 @@ func getReportQueryBasedOnFormParams(selectStatement string, fromStatement strin
 	}
 
 	return fmt.Sprintf("%s\n%s\n%s", selectStatement, fromStatement, whereStatement)
+}
+
+func getTableSuffix(connectionName string) string {
+	switch connectionName {
+	default:
+	case GlobalConnectionName:
+		return ""
+	case Local1ConnectionName:
+		return "_S1"
+	case Local2ConnectionName:
+		return "_S2"
+	case Local3ConnectionName:
+		return "_S3"
+	case Local4ConnectionName:
+		return "_S4"
+	}
+
+	return ""
 }
