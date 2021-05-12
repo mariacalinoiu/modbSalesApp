@@ -3,6 +3,7 @@ package datasources
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 
 	_ "github.com/sijms/go-ora"
@@ -1395,7 +1396,7 @@ func (client DBClient) GetFormReport(params repositories.FormParams) ([]reposito
 	fromStatement := fmt.Sprintf(`FROM "Vanzari%s" v, "LiniiVanzari%s" lv`, client.tableSuffix, client.tableSuffix)
 	groupByStatement := `GROUP BY v."Vat", v."Platit", v."IdIntrare"`
 
-	query := client.getReportQueryBasedOnFormParams(selectStatement, fromStatement, groupByStatement, params)
+	query, _ := client.getReportQueryBasedOnFormParams(selectStatement, fromStatement, groupByStatement, params)
 	fmt.Println(query)
 
 	var (
@@ -1442,17 +1443,24 @@ func (client DBClient) GetFormReport(params repositories.FormParams) ([]reposito
 }
 
 func (client DBClient) GetGroupedFormReport(params repositories.FormParams) ([]repositories.FormResult, error) {
-	selectStatement := `
+	placeholder := "{PLACEHOLDER}"
+	selectStatement := fmt.Sprintf(`
 		SELECT NVL(SUM(lv."Pret"), 0) PretTotal, NVL(SUM(lv."Cantitate"), 0) CantitateTotal, NVL(SUM(v."Vat"), 0) VatTotal, 
-			NVL(SUM(lv."Discount"), 0) DiscountTotal, NVL(SUM(v."Platit"), 0) PlatitTotal, 0 NumarTranzactiiTotal,
+			NVL(SUM(lv."Discount"), 0) DiscountTotal, NVL(SUM(v."Platit"), 0) PlatitTotal, 
+			NVL(SUM(
+				(SELECT COUNT(*) FROM "Vanzari%s" v, "LiniiVanzari%s" lv %s)
+			), 0) NumarTranzactiiTotal,
 			NVL(AVG(lv."Pret"), 0) PretMediu, NVL(AVG(lv."Cantitate"), 0) CantitateMedie, NVL(AVG(v."Vat"), 0) VatMediu, 
-			NVL(AVG(lv."Discount"), 0) DiscountMediu, NVL(AVG(v."Platit"), 0) PlatitMedie, 0 NumarTranzactiiMediu 
-	`
+			NVL(AVG(lv."Discount"), 0) DiscountMediu, NVL(AVG(v."Platit"), 0) PlatitMedie, 
+			NVL(AVG(
+				(SELECT COUNT(*) FROM "Vanzari%s" v, "LiniiVanzari%s" lv %s)
+			), 0) NumarTranzactiiMediu 
+	`, client.tableSuffix, client.tableSuffix, placeholder, client.tableSuffix, client.tableSuffix, placeholder)
 	fromStatement := fmt.Sprintf(`FROM "Vanzari%s" v, "LiniiVanzari%s" lv`, client.tableSuffix, client.tableSuffix)
 	groupByStatement := `GROUP BY lv."IdIntrare"`
-	//groupByStatement := ``
 
-	query := client.getReportQueryBasedOnFormParams(selectStatement, fromStatement, groupByStatement, params)
+	query, where := client.getReportQueryBasedOnFormParams(selectStatement, fromStatement, groupByStatement, params)
+	query = strings.Replace(query, placeholder, where, 2)
 	fmt.Println(query)
 
 	var (
@@ -1513,7 +1521,7 @@ func (client DBClient) GetGroupedFormReport(params repositories.FormParams) ([]r
 	return results, nil
 }
 
-func (client DBClient) getReportQueryBasedOnFormParams(selectStatement string, fromStatement string, groupByStatement string, params repositories.FormParams) string {
+func (client DBClient) getReportQueryBasedOnFormParams(selectStatement string, fromStatement string, groupByStatement string, params repositories.FormParams) (string, string) {
 	whereStatement := ""
 
 	if params.CodVanzator != 0 {
@@ -1579,7 +1587,7 @@ func (client DBClient) getReportQueryBasedOnFormParams(selectStatement string, f
 		whereStatement = fmt.Sprintf(`%s AND v."IdIntrare" = lv."IdIntrare"`, whereStatement)
 	}
 
-	return fmt.Sprintf("%s\n%s\n%s\n%s", selectStatement, fromStatement, whereStatement, groupByStatement)
+	return fmt.Sprintf("%s\n%s\n%s\n%s", selectStatement, fromStatement, whereStatement, groupByStatement), whereStatement
 }
 
 func getTableSuffix(connectionName string) string {
