@@ -134,8 +134,6 @@ type (
 		Vat             float32 `json:"VAT"`
 		Discount        float32 `json:"Discount"`
 		Platit          float32 `json:"Platit"`
-		Comision        float32 `json:"Comision"`
-		Volum           float32 `json:"Volum"`
 		NumarTranzactii float32 `json:"NumarTranzactii"`
 	}
 

@@ -1214,12 +1214,12 @@ func (client DBClient) GetVanzariGrupeArticole() ([]repositories.VanzariGrupeArt
 	)
 
 	rows, err := client.db.Query(fmt.Sprintf(`
-		SELECT NVL(SUM(fv."Platit"), 0) VanzareTotala, da."NumeGrupa"
-		FROM "Fapt_Vanzare%s" fv, "Dimensiune_Articol%s" da
-		WHERE fv."CodArticol" = da."CodArticol"
-		GROUP BY da."NumeGrupa"
+		SELECT NVL(SUM(v."Platit"), 0) VanzareTotala, ga."NumeGrupa"
+		FROM "Vanzari%s" v, "LiniiVanzari%s" lv, "Articole%s" a, "GrupaArticole%s" ga
+		WHERE v."IdIntrare" = lv."IdIntrare" AND lv."CodArticol" = a."CodArticol" AND a."CodGrupa" = ga."CodGrupa"
+		GROUP BY ga."NumeGrupa"
 		
-	`, client.tableSuffix, client.tableSuffix))
+	`, client.tableSuffix, client.tableSuffix, client.tableSuffix, client.tableSuffix))
 	if err != nil {
 		return []repositories.VanzariGrupeArticole{}, err
 	}
@@ -1255,6 +1255,8 @@ func (client DBClient) GetCantitatiJudete() ([]repositories.CantitateJudete, err
 		um             string
 		cantitateMedie float32
 	)
+
+	// TODO: am ramas aici
 
 	rows, err := client.db.Query(fmt.Sprintf(`
 		SELECT NVL(AVG(fv."Cantitate"), 0) CantitateMedie, da."NumeUnitateDeMasura", sda."Judet"
@@ -1299,7 +1301,7 @@ func (client DBClient) GetProcentDiscountTrimestre() ([]repositories.ProcentDisc
 	)
 
 	rows, err := client.db.Query(fmt.Sprintf(`
-		SELECT NVL(AVG(fv."Dicount" * 100 / NVL(fv."Pret", 1)), 0) ProcentDiscount, dd."An" || '-' || 'q' || dd."Trimestru" Trimestru
+		SELECT NVL(AVG(fv."Discount" * 100 / NVL(fv."Pret", 1)), 0) ProcentDiscount, dd."An" || '-' || 'q' || dd."Trimestru" Trimestru
 		FROM "Fapt_Vanzare%s" fv, "Dimesiune_Data%s" dd
 		WHERE fv."Data" = dd."Data"
 		GROUP BY dd."An", dd."Trimestru"
@@ -1389,10 +1391,11 @@ func (client DBClient) GetVolumLivratZile(dataStart string, dataEnd string) ([]r
 }
 
 func (client DBClient) GetFormReport(params repositories.FormParams) ([]repositories.FormResult, error) {
-	selectStatement := `SELECT fv."Pret", fv."Cantitate", fv."Vat", fv."Dicount", fv."Platit", fv."Comision", fv."Volum", fv."NumarTranzactii"`
-	fromStatement := fmt.Sprintf(`FROM "Fapt_Vanzare%s" fv`, client.tableSuffix)
+	selectStatement := `SELECT SUM(lv."Pret") pret, SUM(lv."Cantitate") cantitate, v."Vat", SUM(lv."Discount") discount, v."Platit", COUNT(*) numarTranzactii`
+	fromStatement := fmt.Sprintf(`FROM "Vanzari%s" v, "LiniiVanzari%s" lv`, client.tableSuffix, client.tableSuffix)
+	groupByStatement := `GROUP BY v."Vat", v."Platit", v."IdIntrare"`
 
-	query := client.getReportQueryBasedOnFormParams(selectStatement, fromStatement, params)
+	query := client.getReportQueryBasedOnFormParams(selectStatement, fromStatement, groupByStatement, params)
 	fmt.Println(query)
 
 	var (
@@ -1402,8 +1405,6 @@ func (client DBClient) GetFormReport(params repositories.FormParams) ([]reposito
 		vat             float32
 		discount        float32
 		platit          float32
-		comision        float32
-		volum           float32
 		numarTranzactii float32
 	)
 
@@ -1414,7 +1415,7 @@ func (client DBClient) GetFormReport(params repositories.FormParams) ([]reposito
 
 	defer rows.Close()
 	for rows.Next() {
-		err := rows.Scan(&pret, &cantitate, &vat, &discount, &platit, &comision, &volum, &numarTranzactii)
+		err := rows.Scan(&pret, &cantitate, &vat, &discount, &platit, &numarTranzactii)
 		if err != nil {
 			return []repositories.FormResult{}, err
 		}
@@ -1427,8 +1428,6 @@ func (client DBClient) GetFormReport(params repositories.FormParams) ([]reposito
 				Vat:             vat,
 				Discount:        discount,
 				Platit:          platit,
-				Comision:        comision,
-				Volum:           volum,
 				NumarTranzactii: numarTranzactii,
 			},
 		)
@@ -1444,16 +1443,16 @@ func (client DBClient) GetFormReport(params repositories.FormParams) ([]reposito
 
 func (client DBClient) GetGroupedFormReport(params repositories.FormParams) ([]repositories.FormResult, error) {
 	selectStatement := `
-		SELECT NVL(SUM(fv."Pret"), 0) PretTotal, NVL(SUM(fv."Cantitate"), 0) CantitateTotal, NVL(SUM(fv."Vat"), 0) VatTotal, 
-			NVL(SUM(fv."Dicount"), 0) DiscountTotal, NVL(SUM(fv."Platit"), 0) PlatitTotal, NVL(SUM(fv."Comision"), 0) ComisionTotal, 
-			NVL(SUM(fv."Volum"), 0) VolumTotal, NVL(SUM(fv."NumarTranzactii"), 0) NumarTranzactiiTotal,
-			NVL(AVG(fv."Pret"), 0) PretMediu, NVL(AVG(fv."Cantitate"), 0) CantitateMedie, NVL(AVG(fv."Vat"), 0) VatMediu, 
-			NVL(AVG(fv."Dicount"), 0) DiscountMediu, NVL(AVG(fv."Platit"), 0) PlatitMedie, NVL(AVG(fv."Comision"), 0) ComisionMediu, 
-			NVL(AVG(fv."Volum"), 0) VolumMediu, NVL(AVG(fv."NumarTranzactii"), 0) NumarTranzactiiMediu 
+		SELECT NVL(SUM(lv."Pret"), 0) PretTotal, NVL(SUM(lv."Cantitate"), 0) CantitateTotal, NVL(SUM(v."Vat"), 0) VatTotal, 
+			NVL(SUM(lv."Discount"), 0) DiscountTotal, NVL(SUM(v."Platit"), 0) PlatitTotal, NVL(SUM(COUNT(*)), 0) NumarTranzactiiTotal,
+			NVL(AVG(lv."Pret"), 0) PretMediu, NVL(AVG(lv."Cantitate"), 0) CantitateMedie, NVL(AVG(v."Vat"), 0) VatMediu, 
+			NVL(AVG(lv."Discount"), 0) DiscountMediu, NVL(AVG(v."Platit"), 0) PlatitMedie, NVL(AVG(COUNT(*)), 0) NumarTranzactiiMediu 
 	`
-	fromStatement := fmt.Sprintf(`FROM "Fapt_Vanzare%s" fv`, client.tableSuffix)
+	fromStatement := fmt.Sprintf(`FROM "Vanzari%s" v, "LiniiVanzari%s" lv`, client.tableSuffix, client.tableSuffix)
+	groupByStatement := `GROUP BY lv."IdIntrare"`
+	//groupByStatement := ``
 
-	query := client.getReportQueryBasedOnFormParams(selectStatement, fromStatement, params)
+	query := client.getReportQueryBasedOnFormParams(selectStatement, fromStatement, groupByStatement, params)
 	fmt.Println(query)
 
 	var (
@@ -1463,16 +1462,12 @@ func (client DBClient) GetGroupedFormReport(params repositories.FormParams) ([]r
 		vatTotal             float32
 		discountTotal        float32
 		platitTotal          float32
-		comisionTotal        float32
-		volumTotal           float32
 		numarTranzactiiTotal float32
 		pretMediu            float32
 		cantitateMedie       float32
 		vatMediu             float32
 		discountMediu        float32
 		platitMedie          float32
-		comisionMediu        float32
-		volumMediu           float32
 		numarTranzactiiMediu float32
 	)
 
@@ -1483,8 +1478,8 @@ func (client DBClient) GetGroupedFormReport(params repositories.FormParams) ([]r
 
 	defer rows.Close()
 	for rows.Next() {
-		err := rows.Scan(&pretTotal, &cantitateTotal, &vatTotal, &discountTotal, &platitTotal, &comisionTotal, &volumTotal, &numarTranzactiiTotal,
-			&pretMediu, &cantitateMedie, &vatMediu, &discountMediu, &platitMedie, &comisionMediu, &volumMediu, &numarTranzactiiMediu)
+		err := rows.Scan(&pretTotal, &cantitateTotal, &vatTotal, &discountTotal, &platitTotal, &numarTranzactiiTotal,
+			&pretMediu, &cantitateMedie, &vatMediu, &discountMediu, &platitMedie, &numarTranzactiiMediu)
 		if err != nil {
 			return []repositories.FormResult{}, err
 		}
@@ -1497,8 +1492,6 @@ func (client DBClient) GetGroupedFormReport(params repositories.FormParams) ([]r
 				Vat:             vatTotal,
 				Discount:        discountTotal,
 				Platit:          platitTotal,
-				Comision:        comisionTotal,
-				Volum:           volumTotal,
 				NumarTranzactii: numarTranzactiiTotal,
 			},
 			repositories.FormResult{
@@ -1507,8 +1500,6 @@ func (client DBClient) GetGroupedFormReport(params repositories.FormParams) ([]r
 				Vat:             vatMediu,
 				Discount:        discountMediu,
 				Platit:          platitMedie,
-				Comision:        comisionMediu,
-				Volum:           volumMediu,
 				NumarTranzactii: numarTranzactiiMediu,
 			},
 		)
@@ -1522,7 +1513,7 @@ func (client DBClient) GetGroupedFormReport(params repositories.FormParams) ([]r
 	return results, nil
 }
 
-func (client DBClient) getReportQueryBasedOnFormParams(selectStatement string, fromStatement string, params repositories.FormParams) string {
+func (client DBClient) getReportQueryBasedOnFormParams(selectStatement string, fromStatement string, groupByStatement string, params repositories.FormParams) string {
 	whereStatement := ""
 
 	if params.CodVanzator != 0 {
@@ -1531,7 +1522,7 @@ func (client DBClient) getReportQueryBasedOnFormParams(selectStatement string, f
 		} else {
 			whereStatement = fmt.Sprintf("%s AND ", whereStatement)
 		}
-		whereStatement = fmt.Sprintf("%s %s %d", whereStatement, `fv."CodVanzator" =`, params.CodVanzator)
+		whereStatement = fmt.Sprintf("%s %s %d", whereStatement, `v."CodVanzator" =`, params.CodVanzator)
 	}
 
 	if len(params.NumeArticol) > 0 {
@@ -1540,8 +1531,8 @@ func (client DBClient) getReportQueryBasedOnFormParams(selectStatement string, f
 		} else {
 			whereStatement = fmt.Sprintf("%s AND ", whereStatement)
 		}
-		whereStatement = fmt.Sprintf("%s %s '%s'", whereStatement, `fv."CodArticol" = da."CodArticol" AND da."NumeArticol" =`, params.NumeArticol)
-		fromStatement = fmt.Sprintf(`%s, "Dimensiune_Articol%s" da`, fromStatement, client.tableSuffix)
+		whereStatement = fmt.Sprintf("%s %s '%s'", whereStatement, `lv."CodArticol" = a."CodArticol" AND a."NumeArticol" =`, params.NumeArticol)
+		fromStatement = fmt.Sprintf(`%s, "Articole%s" a`, fromStatement, client.tableSuffix)
 	}
 
 	if len(params.NumeSucursala) > 0 {
@@ -1550,8 +1541,8 @@ func (client DBClient) getReportQueryBasedOnFormParams(selectStatement string, f
 		} else {
 			whereStatement = fmt.Sprintf("%s AND ", whereStatement)
 		}
-		whereStatement = fmt.Sprintf("%s %s '%s'", whereStatement, `fv."IdSucursala" = ds."IdSucursala" AND ds."NumeSucursala" =`, params.NumeSucursala)
-		fromStatement = fmt.Sprintf(`%s, "Dimesiune_Sucursala%s" ds`, fromStatement, client.tableSuffix)
+		whereStatement = fmt.Sprintf("%s %s '%s'", whereStatement, `v."IdSucursala" = s."IdSucursala" AND s."NumeSucursala" =`, params.NumeSucursala)
+		fromStatement = fmt.Sprintf(`%s, "Sucursale%s" s`, fromStatement, client.tableSuffix)
 	}
 
 	if len(params.NumePartener) > 0 {
@@ -1560,8 +1551,8 @@ func (client DBClient) getReportQueryBasedOnFormParams(selectStatement string, f
 		} else {
 			whereStatement = fmt.Sprintf("%s AND ", whereStatement)
 		}
-		whereStatement = fmt.Sprintf("%s %s '%s'", whereStatement, `fv."CodPartener" = dp."CodPartener" AND dp."NumePartener" =`, params.NumePartener)
-		fromStatement = fmt.Sprintf(`%s, "Dimensiune_Partener%s" dp`, fromStatement, client.tableSuffix)
+		whereStatement = fmt.Sprintf("%s %s '%s'", whereStatement, `v."CodPartener" = p."CodPartener" AND p."NumePartener" =`, params.NumePartener)
+		fromStatement = fmt.Sprintf(`%s, "Parteneri%s" p`, fromStatement, client.tableSuffix)
 	}
 
 	if len(params.DataStart) > 0 {
@@ -1570,7 +1561,7 @@ func (client DBClient) getReportQueryBasedOnFormParams(selectStatement string, f
 		} else {
 			whereStatement = fmt.Sprintf("%s AND ", whereStatement)
 		}
-		whereStatement = fmt.Sprintf("%s %s'%s'%s", whereStatement, `fv."Data" >= TO_DATE(`, params.DataStart, `, 'MM/DD/YYYY')`)
+		whereStatement = fmt.Sprintf("%s %s'%s'%s", whereStatement, `v."Data" >= TO_DATE(`, params.DataStart, `, 'MM/DD/YYYY')`)
 	}
 
 	if len(params.DataEnd) > 0 {
@@ -1579,10 +1570,16 @@ func (client DBClient) getReportQueryBasedOnFormParams(selectStatement string, f
 		} else {
 			whereStatement = fmt.Sprintf("%s AND ", whereStatement)
 		}
-		whereStatement = fmt.Sprintf("%s %s'%s'%s", whereStatement, `fv."Data" <= TO_DATE(`, params.DataEnd, `, 'MM/DD/YYYY')`)
+		whereStatement = fmt.Sprintf("%s %s'%s'%s", whereStatement, `v."Data" <= TO_DATE(`, params.DataEnd, `, 'MM/DD/YYYY')`)
 	}
 
-	return fmt.Sprintf("%s\n%s\n%s", selectStatement, fromStatement, whereStatement)
+	if len(whereStatement) == 0 {
+		whereStatement = `WHERE v."IdIntrare" = lv."IdIntrare"`
+	} else {
+		whereStatement = fmt.Sprintf(`%s AND v."IdIntrare" = lv."IdIntrare"`, whereStatement)
+	}
+
+	return fmt.Sprintf("%s\n%s\n%s\n%s", selectStatement, fromStatement, whereStatement, groupByStatement)
 }
 
 func getTableSuffix(connectionName string) string {
