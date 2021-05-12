@@ -1444,9 +1444,9 @@ func (client DBClient) GetFormReport(params repositories.FormParams) ([]reposito
 func (client DBClient) GetGroupedFormReport(params repositories.FormParams) ([]repositories.FormResult, error) {
 	selectStatement := `
 		SELECT NVL(SUM(lv."Pret"), 0) PretTotal, NVL(SUM(lv."Cantitate"), 0) CantitateTotal, NVL(SUM(v."Vat"), 0) VatTotal, 
-			NVL(SUM(lv."Discount"), 0) DiscountTotal, NVL(SUM(v."Platit"), 0) PlatitTotal, NVL(SUM(COUNT(*)), 0) NumarTranzactiiTotal,
+			NVL(SUM(lv."Discount"), 0) DiscountTotal, NVL(SUM(v."Platit"), 0) PlatitTotal, 0 NumarTranzactiiTotal,
 			NVL(AVG(lv."Pret"), 0) PretMediu, NVL(AVG(lv."Cantitate"), 0) CantitateMedie, NVL(AVG(v."Vat"), 0) VatMediu, 
-			NVL(AVG(lv."Discount"), 0) DiscountMediu, NVL(AVG(v."Platit"), 0) PlatitMedie, NVL(AVG(COUNT(*)), 0) NumarTranzactiiMediu 
+			NVL(AVG(lv."Discount"), 0) DiscountMediu, NVL(AVG(v."Platit"), 0) PlatitMedie, 0 NumarTranzactiiMediu 
 	`
 	fromStatement := fmt.Sprintf(`FROM "Vanzari%s" v, "LiniiVanzari%s" lv`, client.tableSuffix, client.tableSuffix)
 	groupByStatement := `GROUP BY lv."IdIntrare"`
