@@ -153,8 +153,8 @@ type (
 		ProcentDiscount float32 `json:"ProcentDiscount"`
 	}
 
-	VolumLivratZile struct {
+	CantitateLivrataZile struct {
 		ZiSaptamana      string  `json:"ZiSaptamana"`
-		VolumMediuLivrat float32 `json:"VolumMediuLivrat"`
+		VolumMediuLivrat float32 `json:"CantitateMedieLivrata"`
 	}
 )

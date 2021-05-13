@@ -1259,12 +1259,21 @@ func (client DBClient) GetCantitatiJudete() ([]repositories.CantitateJudete, err
 
 	// TODO: am ramas aici
 
-	rows, err := client.db.Query(fmt.Sprintf(`
-		SELECT NVL(AVG(fv."Cantitate"), 0) CantitateMedie, da."NumeUnitateDeMasura", sda."Judet"
-		FROM "Fapt_Vanzare%s" fv, "Dimesiune_Sucursala%s" ds, "SubDimensiune_Adresa%s" sda, "Dimensiune_Articol%s" da
-		WHERE fv."IdSucursala" = ds."IdSucursala" AND ds."IdAdresa" = sda."IdAdresa" AND fv."CodArticol" = da."CodArticol"
-		GROUP BY da."NumeUnitateDeMasura", sda."Judet"
-	`, client.tableSuffix, client.tableSuffix, client.tableSuffix, client.tableSuffix))
+	query := fmt.Sprintf(`
+		SELECT (
+			SELECT NVL(AVG(SUM(lv."Cantitate")), 0)
+			FROM "Vanzari%s" v, "LiniiVanzari%s" lv, "Sucursale%s" s, "Adrese%s" ad2, "Articole%s" ar, "UnitatiDeMasura%s" um2 
+			WHERE v."IdIntrare" = lv."IdIntrare" AND v."IdSucursala" = s."IdSucursala" AND s."IdAdresa" = ad2."IdAdresa" AND lv."CodArticol" = ar."CodArticol" AND ar."IdUnitateDeMasura" = um2."IdUnitateDeMasura"
+			AND um2."NumeUnitateDeMasura" = um."NumeUnitateDeMasura" AND ad2."Judet" = ad."Judet"
+			GROUP BY um."NumeUnitateDeMasura", ad."Judet"
+		) CantitateMedie, um."NumeUnitateDeMasura", ad."Judet"
+		FROM "Vanzari%s" v, "LiniiVanzari%s" lv, "Sucursale%s" s, "Adrese%s" ad, "Articole%s" ar, "UnitatiDeMasura%s" um
+		WHERE v."IdIntrare" = lv."IdIntrare" AND v."IdSucursala" = s."IdSucursala" AND s."IdAdresa" = ad."IdAdresa" AND lv."CodArticol" = ar."CodArticol" AND ar."IdUnitateDeMasura" = um."IdUnitateDeMasura"
+		GROUP BY um."NumeUnitateDeMasura", ad."Judet"
+	`, client.tableSuffix, client.tableSuffix, client.tableSuffix, client.tableSuffix, client.tableSuffix, client.tableSuffix, client.tableSuffix, client.tableSuffix, client.tableSuffix, client.tableSuffix, client.tableSuffix, client.tableSuffix)
+	fmt.Println(query)
+
+	rows, err := client.db.Query(query)
 	if err != nil {
 		return []repositories.CantitateJudete{}, err
 	}
@@ -1301,13 +1310,29 @@ func (client DBClient) GetProcentDiscountTrimestre() ([]repositories.ProcentDisc
 		procentDiscount float32
 	)
 
-	rows, err := client.db.Query(fmt.Sprintf(`
-		SELECT NVL(AVG(fv."Discount" * 100 / NVL(fv."Pret", 1)), 0) ProcentDiscount, dd."An" || '-' || 'q' || dd."Trimestru" Trimestru
-		FROM "Fapt_Vanzare%s" fv, "Dimesiune_Data%s" dd
-		WHERE fv."Data" = dd."Data"
-		GROUP BY dd."An", dd."Trimestru"
+	query := fmt.Sprintf(`
+		SELECT NVL(AVG("Discount" * 100 / NVL("Total", 1)), 0) ProcentDiscount, EXTRACT(YEAR FROM "Data") || '-q' || (
+			CASE 
+				WHEN EXTRACT(MONTH FROM "Data") IN (1, 2, 3) THEN 1
+				WHEN EXTRACT(MONTH FROM "Data") IN (4, 5, 6) THEN 2
+				WHEN EXTRACT(MONTH FROM "Data") IN (7, 8, 9) THEN 3
+				WHEN EXTRACT(MONTH FROM "Data") IN (10, 11, 12) THEN 4
+			END
+		) Trimestru
+		FROM "Vanzari%s"
+		GROUP BY EXTRACT(YEAR FROM "Data") || '-q' || (
+			CASE 
+				WHEN EXTRACT(MONTH FROM "Data") IN (1, 2, 3) THEN 1
+				WHEN EXTRACT(MONTH FROM "Data") IN (4, 5, 6) THEN 2
+				WHEN EXTRACT(MONTH FROM "Data") IN (7, 8, 9) THEN 3
+				WHEN EXTRACT(MONTH FROM "Data") IN (10, 11, 12) THEN 4
+			END
+		)
 		ORDER BY Trimestru
-	`, client.tableSuffix, client.tableSuffix))
+	`, client.tableSuffix)
+	fmt.Println(query)
+
+	rows, err := client.db.Query(query)
 	if err != nil {
 		return []repositories.ProcentDiscountTrimestru{}, err
 	}
@@ -1336,56 +1361,71 @@ func (client DBClient) GetProcentDiscountTrimestre() ([]repositories.ProcentDisc
 	return results, nil
 }
 
-func (client DBClient) GetVolumLivratZile(dataStart string, dataEnd string) ([]repositories.VolumLivratZile, error) {
+func (client DBClient) GetCantitateLivrataZile(dataStart string, dataEnd string) ([]repositories.CantitateLivrataZile, error) {
 	var (
-		results          []repositories.VolumLivratZile
-		ziSaptamana      string
-		volumMediuLivrat float32
+		results               []repositories.CantitateLivrataZile
+		ziSaptamana           string
+		cantitateMedieLivrata float32
 	)
 
 	whereStatement := ""
 	if len(dataStart) > 0 {
-		whereStatement = fmt.Sprintf("%s%s%s", `WHERE fv."Data" >= TO_DATE(`, dataStart, `, 'MM/DD/YYYY')`)
+		whereStatement = fmt.Sprintf("%s%s%s", `WHERE v."Data" >= TO_DATE(`, dataStart, `, 'MM/DD/YYYY')`)
 	}
 	if len(dataEnd) > 0 {
 		if len(whereStatement) == 0 {
-			whereStatement = fmt.Sprintf("%s%s%s", `WHERE fv."Data" <= TO_DATE(`, dataEnd, `, 'MM/DD/YYYY')`)
+			whereStatement = fmt.Sprintf("%s%s%s", `WHERE v."Data" <= TO_DATE(`, dataEnd, `, 'MM/DD/YYYY')`)
 		} else {
-			whereStatement = fmt.Sprintf("%s%s%s", ` AND fv."Data" <= TO_DATE(`, dataEnd, `, 'MM/DD/YYYY')`)
+			whereStatement = fmt.Sprintf("%s%s%s", ` AND v."Data" <= TO_DATE(`, dataEnd, `, 'MM/DD/YYYY')`)
 		}
 	}
 
-	rows, err := client.db.Query(fmt.Sprintf("%s\n%s\n%s",
+	subQueryWhere := whereStatement
+	if len(subQueryWhere) == 0 {
+		subQueryWhere = `WHERE v2."IdIntrare" = lv2."IdIntrare" AND TO_CHAR(v2."DataLivrare", 'DY') = TO_CHAR(v."DataLivrare", 'DY')`
+	} else {
+		subQueryWhere = fmt.Sprintf(`%s AND v2."IdIntrare" = lv2."IdIntrare" AND TO_CHAR(v2."DataLivrare", 'DY') = TO_CHAR(v."DataLivrare", 'DY')`, subQueryWhere)
+	}
+
+	query := fmt.Sprintf("%s\n%s\n%s",
 		fmt.Sprintf(`
-		SELECT NVL(AVG(fv."Volum"), 0) VolumMediuLivrat, TO_CHAR(fv."DataLivrare", 'DY') ZiSaptamana
-		FROM "Fapt_Vanzare%s" fv
-		`, client.tableSuffix),
+		SELECT (
+			SELECT NVL(AVG(SUM(lv2."Cantitate")), 0)
+			FROM "Vanzari%s" v2, "LiniiVanzari%s" lv2
+			%s
+			GROUP BY TO_CHAR(v2."DataLivrare", 'DY')
+		) CantitateMedieLivrata, TO_CHAR(v."DataLivrare", 'DY') ZiSaptamana
+		FROM "Vanzari%s" v
+		`, client.tableSuffix, client.tableSuffix, subQueryWhere, client.tableSuffix),
 		whereStatement,
-		`GROUP BY TO_CHAR(fv."DataLivrare", 'DY')`,
-	))
+		`GROUP BY TO_CHAR(v."DataLivrare", 'DY')`,
+	)
+	fmt.Println(query)
+
+	rows, err := client.db.Query(query)
 	if err != nil {
-		return []repositories.VolumLivratZile{}, err
+		return []repositories.CantitateLivrataZile{}, err
 	}
 
 	defer rows.Close()
 	for rows.Next() {
-		err := rows.Scan(&volumMediuLivrat, &ziSaptamana)
+		err := rows.Scan(&cantitateMedieLivrata, &ziSaptamana)
 		if err != nil {
-			return []repositories.VolumLivratZile{}, err
+			return []repositories.CantitateLivrataZile{}, err
 		}
 
 		results = append(
 			results,
-			repositories.VolumLivratZile{
+			repositories.CantitateLivrataZile{
 				ZiSaptamana:      ziSaptamana,
-				VolumMediuLivrat: volumMediuLivrat,
+				VolumMediuLivrat: cantitateMedieLivrata,
 			},
 		)
 	}
 
 	err = rows.Err()
 	if err != nil {
-		return []repositories.VolumLivratZile{}, err
+		return []repositories.CantitateLivrataZile{}, err
 	}
 
 	return results, nil

@@ -10,7 +10,7 @@ import (
 	"modbSalesApp/src/repositories"
 )
 
-func HandleVolumMediuZile(w http.ResponseWriter, r *http.Request, connections datasources.Connections, logger *log.Logger) {
+func HandleCantitateMedieZile(w http.ResponseWriter, r *http.Request, connections datasources.Connections, logger *log.Logger) {
 	var response []byte
 	var status int
 	var err error
@@ -24,10 +24,10 @@ func HandleVolumMediuZile(w http.ResponseWriter, r *http.Request, connections da
 		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, Authorization, X-CSRF-Token")
 		w.Header().Set("Access-Control-Expose-Headers", "Authorization")
 	case http.MethodGet:
-		response, status, err = getVolumMediuZile(db, r, logger)
+		response, status, err = getCantitateMedieZile(db, r, logger)
 	default:
 		status = http.StatusBadRequest
-		err = errors.New("wrong method type for /volumZile route")
+		err = errors.New("wrong method type for /cantitateZile route")
 	}
 
 	if err != nil {
@@ -54,7 +54,7 @@ func HandleVolumMediuZile(w http.ResponseWriter, r *http.Request, connections da
 	logger.Printf("Status: %d %s", status, http.StatusText(status))
 }
 
-func getVolumMediuZile(db datasources.DBClient, r *http.Request, logger *log.Logger) ([]byte, int, error) {
+func getCantitateMedieZile(db datasources.DBClient, r *http.Request, logger *log.Logger) ([]byte, int, error) {
 	dataStart, err := getStringParameter(r, "DataStart", false)
 	if err != nil {
 		return nil, http.StatusBadRequest, err
@@ -64,7 +64,7 @@ func getVolumMediuZile(db datasources.DBClient, r *http.Request, logger *log.Log
 		return nil, http.StatusBadRequest, err
 	}
 
-	articole, err := db.GetVolumLivratZile(dataStart, dataEnd)
+	articole, err := db.GetCantitateLivrataZile(dataStart, dataEnd)
 	if err != nil {
 		logger.Printf("Internal error: %s", err.Error())
 		return nil, http.StatusInternalServerError, errors.New("could not get volumLivratZile")

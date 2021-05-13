@@ -131,9 +131,9 @@ func newServer(connections datasources.Connections, options ...option) *server {
 			handlers.HandleProcentDiscountTrimestre(w, r, connections, s.logger)
 		},
 	)
-	s.mux.HandleFunc("/volumZile",
+	s.mux.HandleFunc("/cantitateZile",
 		func(w http.ResponseWriter, r *http.Request) {
-			handlers.HandleVolumMediuZile(w, r, connections, s.logger)
+			handlers.HandleCantitateMedieZile(w, r, connections, s.logger)
 		},
 	)
 
