@@ -1049,12 +1049,23 @@ func (client DBClient) InsertSucursala(sucursalaAdresa repositories.InsertSucurs
 	}
 
 	sucursala := sucursalaAdresa.Sucursala
-	stmt, err := client.db.Prepare(fmt.Sprintf(`INSERT INTO "Sucursale%s"("NumeSucursala", "IdAdresa") VALUES(:1, :2)`, client.tableSuffix))
+
+	var IDSucursala int
+	rows, err := global.db.Query(fmt.Sprintf(`SELECT NVL(MAX("IdSucursala"), 0) FROM "Sucursale%s"`, client.tableSuffix))
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	rows.Next()
+	err = rows.Scan(&IDSucursala)
+
+	stmt, err := client.db.Prepare(fmt.Sprintf(`INSERT INTO "Sucursale%s"("IdSucursala", NumeSucursala", "IdAdresa") VALUES(:1, :2, :3)`, client.tableSuffix))
 	if err != nil {
 		return err
 	}
 
 	_, err = stmt.Exec(
+		IDSucursala+1,
 		sucursala.NumeSucursala,
 		IDAdresa,
 	)
