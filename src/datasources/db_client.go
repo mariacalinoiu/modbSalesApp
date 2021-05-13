@@ -1370,17 +1370,18 @@ func (client DBClient) GetCantitateLivrataZile(dataStart string, dataEnd string)
 
 	whereStatement := ""
 	if len(dataStart) > 0 {
-		whereStatement = fmt.Sprintf("%s%s%s", `WHERE v."Data" >= TO_DATE(`, dataStart, `, 'MM/DD/YYYY')`)
+		whereStatement = fmt.Sprintf("%s%s%s", `WHERE v."Data" >= TO_DATE('`, dataStart, `', 'MM/DD/YYYY')`)
 	}
 	if len(dataEnd) > 0 {
 		if len(whereStatement) == 0 {
-			whereStatement = fmt.Sprintf("%s%s%s", `WHERE v."Data" <= TO_DATE(`, dataEnd, `, 'MM/DD/YYYY')`)
+			whereStatement = fmt.Sprintf("%s%s%s", `WHERE v."Data" <= TO_DATE('`, dataEnd, `', 'MM/DD/YYYY')`)
 		} else {
-			whereStatement = fmt.Sprintf("%s%s%s", ` AND v."Data" <= TO_DATE(`, dataEnd, `, 'MM/DD/YYYY')`)
+			whereStatement = fmt.Sprintf("%s%s%s%s", whereStatement, ` AND v."Data" <= TO_DATE(`, dataEnd, `, 'MM/DD/YYYY')`)
 		}
 	}
 
 	subQueryWhere := whereStatement
+	subQueryWhere = strings.Replace(subQueryWhere, "v.", "v2.", -1)
 	if len(subQueryWhere) == 0 {
 		subQueryWhere = `WHERE v2."IdIntrare" = lv2."IdIntrare" AND TO_CHAR(v2."DataLivrare", 'DY') = TO_CHAR(v."DataLivrare", 'DY')`
 	} else {

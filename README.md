@@ -98,6 +98,26 @@ Pornirea serverului: ```./server```
                         }
                     }
 
+/adrese
+
+    metoda:         GET
+    exemplu URL:    http://localhost:8081/adrese
+    returneaza:     un JSON care contine o lista de adrese
+    
+    metoda:         POST
+    exemplu URL:    http://localhost:8081/adrese
+    returneaza:     un JSON care indica daca tranzactia a fost realizata cu succes
+    body:           {
+                        "NumeAdresa": "a",
+                        "Oras": "b",
+                        "Judet": "c",
+                        "Sector": "d",
+                        "Strada": "e",
+                        "Numar": "f",
+                        "Bloc": "g",
+                        "Etaj": 1
+                    }
+
 /vanzari
     
     metoda:         GET
@@ -282,11 +302,11 @@ Pornirea serverului: ```./server```
     exemplu URL:    http://localhost:8081/discountTrimestre
     returneaza:     un JSON care contine procentul mediu reprezentat de discount din valoarea platita per trimestru
 
-/volumZile
+/cantitateZile
     
     metoda:         GET
     parametri:      DataStart   (optional)
                     DataEnd     (optional)
-    exemplu URL:    http://localhost:8081/volumZile?DataStart="12/01/2020"&DataEnd="12/01/2022"
-    returneaza:     un JSON care contine volumul mediu livrat in fiecare zi a saptamanii pentru o perioada de timp
-                    determinata de datele trimise ca aprametru
+    exemplu URL:    http://localhost:8081/cantitateZile?DataStart="12/01/2020"&DataEnd="12/01/2022"
+    returneaza:     un JSON care contine cantitatea medie livrata in fiecare zi a saptamanii pentru o perioada de timp
+                    determinata de datele trimise ca parametru
