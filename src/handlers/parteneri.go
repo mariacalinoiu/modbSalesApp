@@ -27,7 +27,7 @@ func HandleParteneri(w http.ResponseWriter, r *http.Request, connections datasou
 	case http.MethodGet:
 		response, status, err = getParteneri(db, logger)
 	case http.MethodPost:
-		status, err = insertPartener(r, db, logger)
+		status, err = insertPartener(r, connections[datasources.GlobalConnectionName], logger)
 	default:
 		status = http.StatusBadRequest
 		err = errors.New("wrong method type for /parteneri route")

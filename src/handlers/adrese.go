@@ -27,7 +27,7 @@ func HandleAdrese(w http.ResponseWriter, r *http.Request, connections datasource
 	case http.MethodGet:
 		response, status, err = getAdrese(db, logger)
 	case http.MethodPost:
-		status, err = insertAdresa(r, db, logger)
+		status, err = insertAdresa(r, connections[datasources.GlobalConnectionName], logger)
 	default:
 		status = http.StatusBadRequest
 		err = errors.New("wrong method type for /adrese route")
