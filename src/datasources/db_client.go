@@ -1051,7 +1051,7 @@ func (client DBClient) InsertSucursala(sucursalaAdresa repositories.InsertSucurs
 	sucursala := sucursalaAdresa.Sucursala
 
 	var IDSucursala int
-	rows, err := global.db.Query(fmt.Sprintf(`SELECT NVL(MAX("IdSucursala"), 0) FROM "Sucursale%s"`, client.tableSuffix))
+	rows, err := global.db.Query(fmt.Sprintf(`SELECT NVL(MAX("IdSucursala"), 0) FROM "Sucursale%s"`, global.tableSuffix))
 	if err != nil {
 		return err
 	}
