@@ -559,7 +559,7 @@ func (client DBClient) GetVanzari() ([]repositories.Vanzare, error) {
 
 func (client DBClient) InsertVanzare(vanzareLinii repositories.InsertVanzare) error {
 	vanzare := vanzareLinii.Vanzare
-	stmt, err := client.db.Prepare(fmt.Sprintf(`INSERT INTO "Vanzari%s"("CodPartener", "Status", "Data", "DataLivrare", "Total", "Vat", "Discount", "Moneda", "Platit", "Comentarii", "CodVanzator", "IdSucursala") VALUES(:1, :2, TO_DATE(:3, 'MM/DD/YYYY'), TO_DATE(:4, 'MM/DD/YYYY'), :5, :6, :7, :8, :9, :10, :11, :12)`, client.tableSuffix))
+	stmt, err := client.db.Prepare(fmt.Sprintf(`INSERT INTO "Vanzari%s"("IdIntrare", "CodPartener", "Status", "Data", "DataLivrare", "Total", "Vat", "Discount", "Moneda", "Platit", "Comentarii", "CodVanzator", "IdSucursala") VALUES(1061, :1, :2, TO_DATE(:3, 'MM/DD/YYYY'), TO_DATE(:4, 'MM/DD/YYYY'), :5, :6, :7, :8, :9, :10, :11, :12)`, client.tableSuffix))
 	if err != nil {
 		return err
 	}
@@ -1059,7 +1059,7 @@ func (client DBClient) InsertSucursala(sucursalaAdresa repositories.InsertSucurs
 	rows.Next()
 	err = rows.Scan(&IDSucursala)
 
-	stmt, err := client.db.Prepare(fmt.Sprintf(`INSERT INTO "Sucursale%s"("IdSucursala", NumeSucursala", "IdAdresa") VALUES(:1, :2, :3)`, client.tableSuffix))
+	stmt, err := client.db.Prepare(fmt.Sprintf(`INSERT INTO "Sucursale%s"("IdSucursala", "NumeSucursala", "IdAdresa") VALUES(:1, :2, :3)`, client.tableSuffix))
 	if err != nil {
 		return err
 	}

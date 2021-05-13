@@ -61,7 +61,7 @@ func getAdrese(db datasources.DBClient, logger *log.Logger) ([]byte, int, error)
 	articole, err := db.GetAdrese()
 	if err != nil {
 		logger.Printf("Internal error: %s", err.Error())
-		return nil, http.StatusInternalServerError, errors.New("could not get articole")
+		return nil, http.StatusInternalServerError, errors.New("could not get adrese")
 	}
 
 	response, err := json.Marshal(articole)
