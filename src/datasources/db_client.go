@@ -1257,15 +1257,13 @@ func (client DBClient) GetCantitatiJudete() ([]repositories.CantitateJudete, err
 		cantitateMedie float32
 	)
 
-	// TODO: am ramas aici
-
 	query := fmt.Sprintf(`
 		SELECT (
 			SELECT NVL(AVG(SUM(lv."Cantitate")), 0)
 			FROM "Vanzari%s" v, "LiniiVanzari%s" lv, "Sucursale%s" s, "Adrese%s" ad2, "Articole%s" ar, "UnitatiDeMasura%s" um2 
 			WHERE v."IdIntrare" = lv."IdIntrare" AND v."IdSucursala" = s."IdSucursala" AND s."IdAdresa" = ad2."IdAdresa" AND lv."CodArticol" = ar."CodArticol" AND ar."IdUnitateDeMasura" = um2."IdUnitateDeMasura"
 			AND um2."NumeUnitateDeMasura" = um."NumeUnitateDeMasura" AND ad2."Judet" = ad."Judet"
-			GROUP BY um."NumeUnitateDeMasura", ad."Judet"
+			GROUP BY um2."NumeUnitateDeMasura", ad2."Judet"
 		) CantitateMedie, um."NumeUnitateDeMasura", ad."Judet"
 		FROM "Vanzari%s" v, "LiniiVanzari%s" lv, "Sucursale%s" s, "Adrese%s" ad, "Articole%s" ar, "UnitatiDeMasura%s" um
 		WHERE v."IdIntrare" = lv."IdIntrare" AND v."IdSucursala" = s."IdSucursala" AND s."IdAdresa" = ad."IdAdresa" AND lv."CodArticol" = ar."CodArticol" AND ar."IdUnitateDeMasura" = um."IdUnitateDeMasura"
