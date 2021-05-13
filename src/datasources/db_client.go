@@ -1042,8 +1042,8 @@ func (client DBClient) GetSucursale() ([]repositories.Sucursala, error) {
 	return sucursale, nil
 }
 
-func (client DBClient) InsertSucursala(sucursalaAdresa repositories.InsertSucursala) error {
-	IDAdresa, err := client.InsertAdresa(sucursalaAdresa.Adresa)
+func (client DBClient) InsertSucursala(sucursalaAdresa repositories.InsertSucursala, global DBClient) error {
+	IDAdresa, err := global.InsertAdresa(sucursalaAdresa.Adresa)
 	if err != nil {
 		return err
 	}

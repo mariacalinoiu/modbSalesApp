@@ -27,7 +27,7 @@ func HandleSucursale(w http.ResponseWriter, r *http.Request, connections datasou
 	case http.MethodGet:
 		response, status, err = getSucursale(db, logger)
 	case http.MethodPost:
-		status, err = insertSucursala(r, db, logger)
+		status, err = insertSucursala(r, db, connections[datasources.GlobalConnectionName], logger)
 	default:
 		status = http.StatusBadRequest
 		err = errors.New("wrong method type for /sucursale route")
@@ -88,13 +88,13 @@ func extractSucursalaParams(r *http.Request) (repositories.InsertSucursala, erro
 	return unmarshalledSucursala, nil
 }
 
-func insertSucursala(r *http.Request, db datasources.DBClient, logger *log.Logger) (int, error) {
+func insertSucursala(r *http.Request, db datasources.DBClient, global datasources.DBClient, logger *log.Logger) (int, error) {
 	sucursala, err := extractSucursalaParams(r)
 	if err != nil {
 		return http.StatusBadRequest, errors.New("sucursala information sent on request body does not match required format")
 	}
 
-	err = db.InsertSucursala(sucursala)
+	err = db.InsertSucursala(sucursala, global)
 	if err != nil {
 		logger.Printf("Internal error: %s", err.Error())
 		return http.StatusInternalServerError, errors.New("could not save sucursala")
