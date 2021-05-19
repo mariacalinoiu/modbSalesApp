@@ -514,7 +514,7 @@ func (client DBClient) GetVanzari() ([]repositories.Vanzare, error) {
 		fmt.Sprintf(`
 			SELECT "IdIntrare", "CodPartener", "Status", "Data", "DataLivrare", "Total", "Vat", "Discount", "Moneda", "Platit", NVL("Comentarii", 'N/A'), "CodVanzator", "IdSucursala" 
 			FROM "Vanzari%s" 
-			ORDER BY "IdIntrare"
+			ORDER BY "IdIntrare" DESC
 			OFFSET 0 ROWS FETCH NEXT 15 ROWS ONLY
 		`, client.tableSuffix),
 	)
