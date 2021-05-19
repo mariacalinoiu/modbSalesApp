@@ -27,7 +27,7 @@ func HandleVanzari(w http.ResponseWriter, r *http.Request, connections datasourc
 	case http.MethodGet:
 		response, status, err = getVanzari(db, logger)
 	case http.MethodPost:
-		status, err = insertVanzare(r, db, logger)
+		status, err = insertVanzare(r, db, connections[datasources.GlobalConnectionName], logger)
 	default:
 		status = http.StatusBadRequest
 		err = errors.New("wrong method type for /vanzari route")
@@ -88,13 +88,13 @@ func extractVanzareParams(r *http.Request) (repositories.InsertVanzare, error) {
 	return unmarshalledvanzare, nil
 }
 
-func insertVanzare(r *http.Request, db datasources.DBClient, logger *log.Logger) (int, error) {
+func insertVanzare(r *http.Request, db datasources.DBClient, general datasources.DBClient, logger *log.Logger) (int, error) {
 	vanzare, err := extractVanzareParams(r)
 	if err != nil {
 		return http.StatusBadRequest, errors.New("vanzare information sent on request body does not match required format")
 	}
 
-	err = db.InsertVanzare(vanzare)
+	err = db.InsertVanzare(vanzare, general)
 	if err != nil {
 		logger.Printf("Internal error: %s", err.Error())
 		return http.StatusInternalServerError, errors.New("could not save vanzare")
