@@ -557,14 +557,25 @@ func (client DBClient) GetVanzari() ([]repositories.Vanzare, error) {
 	return vanzari, nil
 }
 
-func (client DBClient) InsertVanzare(vanzareLinii repositories.InsertVanzare) error {
+func (client DBClient) InsertVanzare(vanzareLinii repositories.InsertVanzare, general DBClient) error {
+	var lastIDIntrare int
+	rows, err := general.db.Query(fmt.Sprintf(`SELECT NVL(MAX("IdIntrare"), 0) FROM "Vanzari%s"`, general.tableSuffix))
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	rows.Next()
+	err = rows.Scan(&lastIDIntrare)
+
 	vanzare := vanzareLinii.Vanzare
-	stmt, err := client.db.Prepare(fmt.Sprintf(`INSERT INTO "Vanzari%s"("IdIntrare", "CodPartener", "Status", "Data", "DataLivrare", "Total", "Vat", "Discount", "Moneda", "Platit", "Comentarii", "CodVanzator", "IdSucursala") VALUES(1061, :1, :2, TO_DATE(:3, 'MM/DD/YYYY'), TO_DATE(:4, 'MM/DD/YYYY'), :5, :6, :7, :8, :9, :10, :11, :12)`, client.tableSuffix))
+	vanzare.IDIntrare = lastIDIntrare + 1
+	stmt, err := client.db.Prepare(fmt.Sprintf(`INSERT INTO "Vanzari%s"("IdIntrare", "CodPartener", "Status", "Data", "DataLivrare", "Total", "Vat", "Discount", "Moneda", "Platit", "Comentarii", "CodVanzator", "IdSucursala") VALUES(:1, :2, :3, TO_DATE(:4, 'MM/DD/YYYY'), TO_DATE(:5, 'MM/DD/YYYY'), :6, :7, :8, :9, :10, :11, :12, :13)`, client.tableSuffix))
 	if err != nil {
 		return err
 	}
 
 	_, err = stmt.Exec(
+		vanzare.IDIntrare,
 		vanzare.CodPartener,
 		vanzare.Status,
 		vanzare.Data,
@@ -582,17 +593,8 @@ func (client DBClient) InsertVanzare(vanzareLinii repositories.InsertVanzare) er
 		return err
 	}
 
-	var IDIntrare int
-	rows, err := client.db.Query(fmt.Sprintf(`SELECT NVL(MAX("IdIntrare"), 0) FROM "Vanzari%s"`, client.tableSuffix))
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-	rows.Next()
-	err = rows.Scan(&IDIntrare)
-
 	for _, linie := range vanzareLinii.LiniiVanzari {
-		linie.IDIntrare = IDIntrare
+		linie.IDIntrare = vanzare.IDIntrare
 		err = client.InsertLinieVanzare(linie)
 		if err != nil {
 			return err
